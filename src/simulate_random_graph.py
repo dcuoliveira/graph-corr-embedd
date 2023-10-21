@@ -1,8 +1,8 @@
 import os
 import argparse
 
-from simulation.GraphSim import GraphSim
-from utils.conn_data import save_pickle
+from src.simulation.GraphSim import GraphSim
+from src.utils.conn_data import save_pickle
 
 parser = argparse.ArgumentParser()
 
