@@ -15,6 +15,8 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=1)
+parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
+parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network..', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=100)
@@ -29,10 +31,16 @@ if __name__ == '__main__':
 
     # load graph data
     el =  ExamplesLoader(example_name="cora")
-    G, Adj, Node = el.G, el.Adj, el.Node
+    G, Adj, n_nodes = el.G, el.Adj, el.n_nodes
 
     # define model
-    model = SDNE(node_size=Node, n_hidden=args.n_hidden, droput=args.dropout)
+    model = SDNE(node_size=n_nodes,
+                 n_hidden=args.n_hidden,
+                 n_layers_enc=args.n_layers_enc,
+                 n_layers_dec=args.n_layers_dec,
+                 bias_enc=True,
+                 bias_dec=True,
+                 droput=args.dropout)
 
     # define loss functions
     loss_global = LossGlobal()
@@ -43,7 +51,7 @@ if __name__ == '__main__':
     opt = optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # create data loader
-    Data = Dataload(Adj, Node)
+    Data = Dataload(Adj, n_nodes)
     Data = DataLoader(Data, batch_size=args.batch_size, shuffle=True)
 
     # train model
@@ -54,30 +62,56 @@ if __name__ == '__main__':
         loss_tot_tot, loss_global_tot, loss_local_tot, loss_reg_tot = 0, 0, 0, 0
         for index in Data:
 
-            opt.zero_grad()
-
+            # select batch info
             adj_batch = Adj[index]
             adj_mat = adj_batch[:, index]
             b_mat = torch.ones_like(adj_batch)
             b_mat[adj_batch != 0] = args.beta
 
+            # set previous gradients to zero
+            opt.zero_grad()
+
+            # forward pass model
             x, z, z_norm = model(adj_batch, adj_mat, b_mat)
 
-            loss_global = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-            loss_local = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-            loss_reg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+            # compute loss functions
+            loss_global = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
+            loss_local = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
+            loss_reg = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
 
+            # compute total loss
             loss_tot = (args.alpha * loss_global) + loss_local + (args.nu * loss_reg)
-            loss_tot.backward()
-            opt.step()
 
             loss_tot_tot += loss_tot
             loss_global_tot += loss_global
             loss_local_tot += loss_local
             loss_reg_tot += loss_reg
 
+            # backward pass
+            loss_tot.backward()
+            opt.step()
+
+    # evaluate model
     model.eval()
-    embedding = model.savector(Adj)
-    outVec = embedding.detach().numpy()
-    np.savetxt(args.output, outVec)
+
+    with torch.no_grad():
+
+        # forward pass model
+        adj_batch = Adj
+        adj_mat = adj_batch[:, :]
+        b_mat = torch.ones_like(adj_batch)
+        b_mat[adj_batch != 0] = args.beta
+        x, z, z_norm = model(Adj, Adj[:,:], b_mat)
+
+        # compute loss functions
+        loss_global = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+        loss_local = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+        loss_reg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+
+        # compute total loss
+        eval_loss_tot = (args.alpha * loss_global) + loss_local + (args.nu * loss_reg)
+
+    # save results
+
+    
 
