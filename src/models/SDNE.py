@@ -6,10 +6,27 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 
 class SDNE(nn.Module):
-    def __init__(self, node_size, n_hidden, droput):
+    def __init__(self,
+                 node_size: int,
+                 n_hidden: int,
+                 n_layers_enc: int,
+                 n_layers_dec: int,
+                 bias_enc: bool,
+                 bias_dec: bool,
+                 droput: float):
         super(SDNE, self).__init__()
-        self.encode = nn.Linear(node_size, n_hidden)
-        self.decode = nn.Linear(n_hidden, node_size)
+
+        # encoder
+        self.encoder = nn.ModuleList([nn.Linear(node_size, n_hidden, bias=bias_enc) if i == 0
+                                       else nn.Linear(n_hidden, n_hidden)
+                                         for i in range(n_layers_enc)])
+
+        # decoder
+        self.decoder = nn.ModuleList([nn.Linear(n_hidden, n_hidden, bias=bias_dec) if i == 0
+                                       else nn.Linear(n_hidden, n_hidden)
+                                         for i in range(n_layers_dec)])
+
+        # sparsity
         self.droput = droput
 
     def loss_regularization(self):
@@ -18,10 +35,10 @@ class SDNE(nn.Module):
     def forward(self, adj_batch):
 
         # encoder
-        z = F.leaky_relu(self.encode(adj_batch))
+        z = F.leaky_relu(self.encoder(adj_batch))
                 
         # decode
-        x = F.leaky_relu(self.decode(z))
+        x = F.leaky_relu(self.decoder(z))
 
         # normalize embeddings
         z_norm = torch.sum(z * z, dim=1, keepdim=True)
