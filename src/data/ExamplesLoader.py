@@ -25,7 +25,7 @@ class ExamplesLoader(object):
 
         self.G = graph_data["G"]
         self.Adj = graph_data["Adj"]
-        self.Node = graph_data["Node"]
+        self.n_nodes = graph_data["Node"]
     
 DEBUG = False
 
