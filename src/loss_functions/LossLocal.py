@@ -5,11 +5,11 @@ class LossLocal(nn.Module):
     def __init__(self):
         pass
 
-    def forward(self, z, adj_mat):
+    def forward(self, adj, z):
 
-        z_norm = torch.sum(embedding * embedding, dim=1, keepdim=True) 
+        z_norm = torch.sum(z * z, dim=1, keepdim=True) 
 
-        loss = torch.sum(adj_mat * (z_norm - 2 * torch.mm(z, torch.transpose(z, dim0=0, dim1=1)) + torch.transpose(z_norm, dim0=0, dim1=1)))
+        loss = torch.sum(adj * (z_norm - 2 * torch.mm(z, torch.transpose(z, dim0=0, dim1=1)) + torch.transpose(z_norm, dim0=0, dim1=1)))
 
         return loss
         
