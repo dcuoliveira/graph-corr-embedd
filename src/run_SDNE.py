@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
-parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=1)
+parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
             opt.zero_grad()
 
             # forward pass model
-            x, z, z_norm = model(adj_batch, adj_mat, b_mat)
+            x, z, z_norm = model(adj_batch)
 
             # save outputs
             xs_train.append(x.detach())
@@ -84,20 +84,20 @@ if __name__ == '__main__':
             z_norms_train.append(z_norm.detach())
 
             # compute loss functions
-            loss_global = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
-            loss_local = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
-            loss_reg = loss_global(adj=adj_batch, x=x, b_mat=b_mat)
+            lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+            ll = loss_local.forward(adj=adj_mat, z=z)
+            lr = loss_reg.forward(model=model)
 
             # compute total loss
-            loss_tot = (args.alpha * loss_global) + loss_local + (args.nu * loss_reg)
+            lt = (args.alpha * lg) + ll + (args.nu * lr)
 
-            loss_tot_tot += loss_tot
-            loss_global_tot += loss_global
-            loss_local_tot += loss_local
-            loss_reg_tot += loss_reg
+            loss_tot_tot += lt
+            loss_global_tot += lg
+            loss_local_tot += ll
+            loss_reg_tot += lr
 
             # backward pass
-            loss_tot.backward()
+            lt.backward()
             opt.step()
 
     # evaluate model
