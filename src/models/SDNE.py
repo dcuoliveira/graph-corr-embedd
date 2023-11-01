@@ -17,14 +17,22 @@ class SDNE(nn.Module):
         super(SDNE, self).__init__()
 
         # encoder
-        self.encoder = nn.ModuleList([nn.Linear(node_size, n_hidden, bias=bias_enc) if i == 0
-                                       else nn.Linear(n_hidden, n_hidden)
-                                         for i in range(n_layers_enc)])
+        encoder_layers = []
+        for i in range(n_layers_enc):
+            if i == 0:
+                encoder_layers.append(nn.Linear(node_size, n_hidden, bias=bias_enc))
+            else:
+                encoder_layers.append(nn.Linear(n_hidden, n_hidden, bias=bias_enc))
+        self.encoder = nn.Sequential(*encoder_layers)
 
         # decoder
-        self.decoder = nn.ModuleList([nn.Linear(n_hidden, n_hidden, bias=bias_dec) if i == 0
-                                       else nn.Linear(n_hidden, n_hidden)
-                                         for i in range(n_layers_dec)])
+        decoder_layers = []
+        for i in range(n_layers_dec):
+            if i != (n_layers_dec-1):
+                decoder_layers.append(nn.Linear(n_hidden, n_hidden, bias=bias_dec))
+            else:
+                decoder_layers.append(nn.Linear(n_hidden, node_size))
+        self.decoder = nn.Sequential(*decoder_layers)
 
         # sparsity
         self.droput = droput
