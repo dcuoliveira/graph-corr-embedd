@@ -21,7 +21,7 @@ class ExamplesLoader(object):
         self._read_data()
 
     def _read_data(self):
-        graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", "examples", self.example_name, "graph_info.pickle"))
+        graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.example_name, "graph_info.pickle"))
 
         self.G = graph_data["G"]
         self.Adj = graph_data["Adj"]
