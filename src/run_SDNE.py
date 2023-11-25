@@ -139,7 +139,7 @@ if __name__ == '__main__':
         loss_eval_tot = (args.alpha * lg) + ll + (args.nu * lr)
 
     # save results
-    train_results = {
+    results = {
 
         "xs_train": xs_train,
         "zs_train": zs_train,
@@ -150,57 +150,25 @@ if __name__ == '__main__':
         "loss_local_tot": loss_local_tot,
         "loss_reg_tot": loss_reg_tot,
 
-    }
-
-    train_summary = {
-
-        "epochs_loss_train": epochs_loss_train_tot,
-        "model": model
-
-    }
-
-    eval_results = {
+        "epochs_train_loss": epochs_loss_train_tot,
+        "model": model,
 
         "xs_eval": xs_eval,
         "zs_eval": zs_eval,
         "z_norms_eval": z_norms_eval,
+
+        "args": args
+
     }
 
     # check if dir exists
     if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name)):
         os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name))
 
-    # save summary results
-    save_pickle(obj=train_summary,
-                path=os.path.join(os.path.dirname(__file__),
-                                  "data",
-                                  "outputs",
-                                  args.model_name,
-                                  "train_summary.pickle"))
-
-    # save train results
-    save_pickle(obj=train_results,
-                path=os.path.join(os.path.dirname(__file__),
-                                  "data",
-                                  "outputs",
-                                  args.model_name,
-                                  "train_results.pickle"))
-    
-    # save eval results
-    save_pickle(obj=eval_results,
-                path=os.path.join(os.path.dirname(__file__),
-                                  "data",
-                                  "outputs",
-                                  args.model_name,
-                                  "eval_results.pickle"))
-    
-    # save args
-    save_pickle(obj=args,
-                path=os.path.join(os.path.dirname(__file__),
-                                  "data",
-                                  "outputs",
-                                  args.model_name,
-                                  "args.json"))
-
-    
-
+    for key, value in results.items():
+        save_pickle(value,
+                    os.path.join(os.path.dirname(__file__),
+                                    "data",
+                                    "outputs",
+                                    args.model_name,
+                                    f"{key}.pickle"))
