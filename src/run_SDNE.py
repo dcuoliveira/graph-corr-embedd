@@ -145,11 +145,6 @@ if __name__ == '__main__':
         "zs_train": zs_train,
         "z_norms_train": z_norms_train,
 
-        "loss_train_tot": loss_train_tot,
-        "loss_global_tot": loss_global_tot,
-        "loss_local_tot": loss_local_tot,
-        "loss_reg_tot": loss_reg_tot,
-
         "epochs_train_loss": epochs_loss_train_tot,
         "model": model,
 
@@ -166,8 +161,8 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name))
 
     for key, value in results.items():
-        save_pickle(value,
-                    os.path.join(os.path.dirname(__file__),
+        save_pickle(obj={key: value},
+                    path=os.path.join(os.path.dirname(__file__),
                                     "data",
                                     "outputs",
                                     args.model_name,
