@@ -3,6 +3,7 @@ import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 import argparse
 import os
+from tqdm import tqdm
 
 from models.SDNE import SDNE
 from loss_functions.LossGlobal import LossGlobal
@@ -46,8 +47,8 @@ if __name__ == '__main__':
                  droput=args.dropout)
 
     # define loss functions
-    loss_global = LossGlobal()
     loss_local = LossLocal()
+    loss_global = LossGlobal()
     loss_reg = LossReg()
 
     # define optimizer
@@ -60,10 +61,13 @@ if __name__ == '__main__':
     # train model
     model.train()
 
-    xs_train, zs_train, z_norms_train = [], [], []
+    # initialize tqdm
+    pbar = tqdm(total=args.epochs)
+
+    xs_train, zs_train, z_norms_train, epochs_loss_train_tot = [], [], [], []
     for epoch in range(1, args.epochs + 1):
 
-        loss_tot_tot, loss_global_tot, loss_local_tot, loss_reg_tot = 0, 0, 0, 0
+        loss_train_tot, loss_global_tot, loss_local_tot, loss_reg_tot = 0, 0, 0, 0
         for index in Data:
 
             # select batch info
@@ -84,14 +88,15 @@ if __name__ == '__main__':
             z_norms_train.append(z_norm.detach())
 
             # compute loss functions
-            lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
             ll = loss_local.forward(adj=adj_mat, z=z)
+            lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
             lr = loss_reg.forward(model=model)
 
             # compute total loss
+            # lg >>> lr > ll
             lt = (args.alpha * lg) + ll + (args.nu * lr)
 
-            loss_tot_tot += lt
+            loss_train_tot += lt
             loss_global_tot += lg
             loss_local_tot += ll
             loss_reg_tot += lr
@@ -99,6 +104,13 @@ if __name__ == '__main__':
             # backward pass
             lt.backward()
             opt.step()
+
+        # update tqdm
+        pbar.update(1)
+        pbar.set_description("Epoch: %d, Train Loss: %.4f" % (epoch, loss_train_tot))
+
+        # save loss
+        epochs_loss_train_tot.append(loss_train_tot.detach())
 
     # evaluate model
     model.eval()
@@ -111,7 +123,7 @@ if __name__ == '__main__':
         adj_mat = adj_batch[:, :]
         b_mat = torch.ones_like(adj_batch)
         b_mat[adj_batch != 0] = args.beta
-        x, z, z_norm = model(Adj, Adj[:,:], b_mat)
+        x, z, z_norm = model(adj_batch)
 
         # save outputs
         xs_eval.append(x.detach())
@@ -119,12 +131,12 @@ if __name__ == '__main__':
         z_norms_eval.append(z_norm.detach())
 
         # compute loss functions
-        loss_global = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-        loss_local = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-        loss_reg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+        ll = loss_local.forward(adj=adj_mat, z=z)
+        lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
+        lr = loss_reg.forward(model=model)
 
         # compute total loss
-        eval_loss_tot = (args.alpha * loss_global) + loss_local + (args.nu * loss_reg)
+        loss_eval_tot = (args.alpha * lg) + ll + (args.nu * lr)
 
     # save results
     results = {
@@ -137,15 +149,12 @@ if __name__ == '__main__':
         "zs_eval": zs_eval,
         "z_norms_eval": z_norms_eval,
 
-        "loss_tot_tot": loss_tot_tot,
+        "loss_train_tot": loss_train_tot,
         "loss_global_tot": loss_global_tot,
         "loss_local_tot": loss_local_tot,
         "loss_reg_tot": loss_reg_tot,
 
-        "eval_loss_tot": eval_loss_tot,
-        "loss_global": loss_global,
-        "loss_local": loss_local,
-        "loss_reg": loss_reg,
+        "epochs_loss_train": epochs_loss_train_tot,
 
         "args": args
 
