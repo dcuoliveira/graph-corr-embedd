@@ -156,8 +156,6 @@ if __name__ == '__main__':
 
         "epochs_loss_train": epochs_loss_train_tot,
 
-        "args": args
-
     }
 
     # check if dir exists
@@ -170,7 +168,15 @@ if __name__ == '__main__':
                                   "data",
                                   "outputs",
                                   args.model_name,
-                                  "results.pkl"))
+                                  "results.pickle"))
+    
+    # save args
+    save_pickle(obj=args,
+                path=os.path.join(os.path.dirname(__file__),
+                                  "data",
+                                  "outputs",
+                                  args.model_name,
+                                  "args.json"))
 
     
 
