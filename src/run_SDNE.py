@@ -111,6 +111,7 @@ if __name__ == '__main__':
 
         # save loss
         epochs_loss_train_tot.append(loss_train_tot.detach())
+    pbar.close()
 
     # evaluate model
     model.eval()
@@ -160,6 +161,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name)):
         os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name))
 
+    pbar = tqdm(total=len(results))
     for key, value in results.items():
         save_pickle(obj={key: value},
                     path=os.path.join(os.path.dirname(__file__),
@@ -167,3 +169,7 @@ if __name__ == '__main__':
                                     "outputs",
                                     args.model_name,
                                     f"{key}.pickle"))
+        pbar.update(1)
+        pbar.set_description(f"Saving {key}")
+
+    pbar.close()
