@@ -139,36 +139,60 @@ if __name__ == '__main__':
         loss_eval_tot = (args.alpha * lg) + ll + (args.nu * lr)
 
     # save results
-    results = {
+    train_results = {
 
         "xs_train": xs_train,
         "zs_train": zs_train,
         "z_norms_train": z_norms_train,
-
-        "xs_eval": xs_eval,
-        "zs_eval": zs_eval,
-        "z_norms_eval": z_norms_eval,
 
         "loss_train_tot": loss_train_tot,
         "loss_global_tot": loss_global_tot,
         "loss_local_tot": loss_local_tot,
         "loss_reg_tot": loss_reg_tot,
 
-        "epochs_loss_train": epochs_loss_train_tot,
+    }
 
+    train_summary = {
+
+        "epochs_loss_train": epochs_loss_train_tot,
+        "model": model
+
+    }
+
+    eval_results = {
+
+        "xs_eval": xs_eval,
+        "zs_eval": zs_eval,
+        "z_norms_eval": z_norms_eval,
     }
 
     # check if dir exists
     if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name)):
         os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name))
 
-    # save results
-    save_pickle(obj=results,
+    # save summary results
+    save_pickle(obj=train_summary,
                 path=os.path.join(os.path.dirname(__file__),
                                   "data",
                                   "outputs",
                                   args.model_name,
-                                  "results.pickle"))
+                                  "train_summary.pickle"))
+
+    # save train results
+    save_pickle(obj=train_results,
+                path=os.path.join(os.path.dirname(__file__),
+                                  "data",
+                                  "outputs",
+                                  args.model_name,
+                                  "train_results.pickle"))
+    
+    # save eval results
+    save_pickle(obj=eval_results,
+                path=os.path.join(os.path.dirname(__file__),
+                                  "data",
+                                  "outputs",
+                                  args.model_name,
+                                  "eval_results.pickle"))
     
     # save args
     save_pickle(obj=args,
