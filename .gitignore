@@ -1,3 +1,6 @@
+# data tmp
+notebooks/tmp/*
+
 # vscode
 .DS_Store
 
