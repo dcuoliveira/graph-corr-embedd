@@ -31,6 +31,7 @@ class ExamplesLoader(object):
         self.G = self.graph_data["G"]
         self.Adj = self.graph_data["Adj"]
         self.n_nodes = self.graph_data["Node"]
+        self.data = self.graph_data["torch_graph_data"]
     
 DEBUG = False
 
