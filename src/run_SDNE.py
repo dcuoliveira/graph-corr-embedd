@@ -150,9 +150,9 @@ if __name__ == '__main__':
         "epochs_train_loss": epochs_loss_train_tot,
         "model": model, 
 
-        "xs_eval": xs_eval,
-        "zs_eval": zs_eval,
-        "z_norms_eval": z_norms_eval,
+        "xs_eval": xs_eval[-1],
+        "zs_eval": zs_eval[-1],
+        "z_norms_eval": z_norms_eval[-1],
 
         "args": args
 
