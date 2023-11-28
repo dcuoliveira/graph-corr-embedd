@@ -17,6 +17,7 @@ from utils.conn_data import save_pickle
 parser = argparse.ArgumentParser()
 
 # General parameters
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="cora")
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
@@ -34,7 +35,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # load graph data
-    el =  ExamplesLoader(example_name="cora")
+    el =  ExamplesLoader(example_name=args.dataset_name)
     G, Adj, n_nodes = el.G, el.Adj, el.n_nodes
 
     # define model
@@ -147,7 +148,7 @@ if __name__ == '__main__':
         "z_norms_train": z_norms_train[-1],
 
         "epochs_train_loss": epochs_loss_train_tot,
-        "model": model,
+        "model": model, 
 
         "xs_eval": xs_eval,
         "zs_eval": zs_eval,
@@ -158,8 +159,8 @@ if __name__ == '__main__':
     }
 
     # check if dir exists
-    if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name)):
-        os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.model_name))
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.dataset_name, args.model_name)):
+        os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.dataset_name, args.model_name))
 
     pbar = tqdm(total=len(results))
     for key, value in results.items():
@@ -167,6 +168,7 @@ if __name__ == '__main__':
                     path=os.path.join(os.path.dirname(__file__),
                                     "data",
                                     "outputs",
+                                    args.dataset_name,
                                     args.model_name,
                                     f"{key}.pickle"))
         pbar.update(1)
