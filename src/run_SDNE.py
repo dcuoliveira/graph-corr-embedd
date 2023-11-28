@@ -142,9 +142,9 @@ if __name__ == '__main__':
     # save results
     results = {
 
-        "xs_train": xs_train,
-        "zs_train": zs_train,
-        "z_norms_train": z_norms_train,
+        "xs_train": xs_train[-1],
+        "zs_train": zs_train[-1],
+        "z_norms_train": z_norms_train[-1],
 
         "epochs_train_loss": epochs_loss_train_tot,
         "model": model,
