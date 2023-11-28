@@ -34,7 +34,7 @@ if __name__ == "__main__":
     gs = GraphSim(graph_name=args.graph_name, seed=args.seed)
 
     # Check if path exists
-    output_path = f"{args.source_path}/data/outputs/{args.graph_name}"
+    output_path = f"{args.source_path}/data/inputs/{args.graph_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
