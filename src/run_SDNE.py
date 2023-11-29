@@ -65,7 +65,8 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(total=args.epochs)
 
-    xs_train, zs_train, z_norms_train, epochs_loss_train_tot = [], [], [], []
+    xs_train, zs_train, z_norms_train = [], [], [], []
+    epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
     for epoch in range(1, args.epochs + 1):
 
         loss_train_tot, loss_global_tot, loss_local_tot, loss_reg_tot = 0, 0, 0, 0
@@ -112,6 +113,10 @@ if __name__ == '__main__':
 
         # save loss
         epochs_loss_train_tot.append(loss_train_tot.detach())
+        epochs_loss_global_tot.append(loss_global_tot.detach())
+        epochs_loss_local_tot.append(loss_local_tot.detach())
+        epochs_loss_reg_tot.append(loss_reg_tot.detach())
+
     pbar.close()
 
     # evaluate model
@@ -148,6 +153,9 @@ if __name__ == '__main__':
         "z_norms_train": z_norms_train[-1],
 
         "epochs_train_loss": epochs_loss_train_tot,
+        "epochs_global_loss": epochs_loss_global_tot,
+        "epochs_local_loss": epochs_loss_local_tot,
+        "epochs_reg_loss": epochs_loss_reg_tot,
         "model": model, 
 
         "xs_eval": xs_eval[-1],
