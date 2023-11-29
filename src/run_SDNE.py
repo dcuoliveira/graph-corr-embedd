@@ -65,7 +65,7 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(total=args.epochs)
 
-    xs_train, zs_train, z_norms_train = [], [], [], []
+    xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
     for epoch in range(1, args.epochs + 1):
 
