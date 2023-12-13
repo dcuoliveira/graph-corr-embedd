@@ -1,5 +1,6 @@
 import os
 import argparse
+import random
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 
@@ -31,14 +32,14 @@ parser.add_argument('--p_ws', type=float, help='Probability of rewiring each edg
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    gs = GraphSim(graph_name=args.graph_name, seed=args.seed)
-
     # Check if path exists
     output_path = f"{args.source_path}/data/inputs/{args.graph_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
     for i in range(args.simulations):
+        seed = random.randint(0, 9999)
+        gs = GraphSim(graph_name=args.graph_name, seed=seed)
         if args.graph_name == "erdos_renyi":
             graph_info = gs.simulate_erdos(n=args.n, prob=args.prob)
             save_pickle(path=f"{output_path}/graph_info_{args.n}_{args.prob}_sim_{i}.pkl", obj=graph_info)
