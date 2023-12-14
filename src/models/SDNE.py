@@ -6,6 +6,29 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 
 class SDNE(nn.Module):
+    """
+    Implementation of the SDNE (Structural Deep Network Embedding) model.
+
+    Args:
+        node_size (int): Number of nodes in the graph.
+        n_hidden (int): Number of hidden units in the encoder and decoder layers.
+        n_layers_enc (int): Number of layers in the encoder.
+        n_layers_dec (int): Number of layers in the decoder.
+        bias_enc (bool): Whether to include bias in the encoder layers.
+        bias_dec (bool): Whether to include bias in the decoder layers.
+        droput (float): Dropout rate for regularization.
+
+    Attributes:
+        encoder (nn.Sequential): Encoder layers of the SDNE model.
+        decoder (nn.Sequential): Decoder layers of the SDNE model.
+        droput (float): Dropout rate for regularization.
+
+    Methods:
+        loss_regularization: Placeholder method for loss regularization.
+        forward: Forward pass of the SDNE model.
+
+    """
+
     def __init__(self,
                  node_size: int,
                  n_hidden: int,
@@ -38,10 +61,24 @@ class SDNE(nn.Module):
         self.droput = droput
 
     def loss_regularization(self):
+        """
+        Placeholder method for loss regularization.
+        """
         pass
 
     def forward(self, adj_batch):
+        """
+        Forward pass of the SDNE model.
 
+        Args:
+            adj_batch (torch.Tensor): Batch of adjacency matrices.
+
+        Returns:
+            x (torch.Tensor): Reconstructed adjacency matrices.
+            z (torch.Tensor): Encoded node embeddings.
+            z_norm (torch.Tensor): Normalized node embeddings.
+
+        """
         # encoder
         z = F.leaky_relu(self.encoder(adj_batch))
                 
