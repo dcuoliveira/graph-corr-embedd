@@ -26,10 +26,6 @@ class Spectrum(nn.Module):
         correlation, _ = spearmanr(largest_eigenvalues_g1, largest_eigenvalues_g2)
         return correlation
 
-# Example usage
-# Assuming g1 and g2 are lists of adjacency matrices (numpy arrays)
-# g1 = [adj_matrix1, adj_matrix2, ...]
-# g2 = [adj_matrix1, adj_matrix2, ...]
-# analysis = GraphSpectrumAnalysis()
-# correlation = analysis.calculate_spearman_correlation(g1, g2)
-# print("Spearman Correlation:", correlation)
+
+if __name__ == "__main__":
+    pass
