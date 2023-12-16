@@ -1,7 +1,8 @@
 import networkx as nx
+import numpy as np
 
 class GraphSim:
-    def __init__(self, graph_name: str, seed: int = 2294):
+    def __init__(self, graph_name: str):
         """
         Random Graph simulation class.
         
@@ -13,7 +14,33 @@ class GraphSim:
             None
         """
         self.graph_name = graph_name
-        self.seed = seed
+
+    def get_p_from_bivariate_gaussian(self, s: float):
+        """
+        Generate probability of edge creation from a bivariate gaussian distribution.
+        
+        Args:
+            s: covariance between gaussian random variables.
+            
+        Returns:
+            probability of edge creation.
+        """
+
+        p = np.random.multivariate_normal(mean=[0, 0], cov=[[1, s], [s, 1]], size=1)
+
+        return p
+
+    def update_seed(self):
+        """
+        Update random seed.
+        
+        Args:
+            seed: random seed.
+            
+        Returns:
+            None
+        """
+        self.seed = np.random.randint(0, 100000)
 
     def simulate_erdos(self, n: int, prob: float):
         """
