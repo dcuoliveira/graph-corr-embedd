@@ -1,5 +1,6 @@
 import os
 import argparse
+import random
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 
@@ -7,13 +8,9 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
-parser.add_argument('--n', type=int, help='Number of nodes.', default=20)
-parser.add_argument('--seed', type=int, help='Random seed.', default=2294)
+parser.add_argument('--n', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--simulations', type=int, help='Number of simulations.', default=1)
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
-
-# Erdos Renyi graph parameters
-parser.add_argument('--prob', type=float, help='Probability of edge creation (for Erdos Renyi graph).', default=0.5)
 
 # k-regular graph parameters
 parser.add_argument('--k', type=int, help='Degree of each node (for k-regular graph).', default=3)
@@ -31,14 +28,16 @@ parser.add_argument('--p_ws', type=float, help='Probability of rewiring each edg
 if __name__ == "__main__":
     args = parser.parse_args()
 
-    gs = GraphSim(graph_name=args.graph_name, seed=args.seed)
-
     # Check if path exists
     output_path = f"{args.source_path}/data/inputs/{args.graph_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
     for i in range(args.simulations):
+
+        seed = random.randint(0, 9999)
+        gs = GraphSim(graph_name=args.graph_name, seed=seed)
+
         if args.graph_name == "erdos_renyi":
             graph_info = gs.simulate_erdos(n=args.n, prob=args.prob)
             save_pickle(path=f"{output_path}/graph_info_{args.n}_{args.prob}_sim_{i}.pkl", obj=graph_info)
