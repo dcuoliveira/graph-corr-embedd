@@ -57,6 +57,8 @@ if __name__ == "__main__":
                     
                 }
 
-                save_pickle(path=f"{output_path}/graph_{np.round(s, 1)}_{i}_{j}.pkl", obj=graph_info)
+                all_graphs[f"{np.round(s, 1)}_{i}_{j}"] = graph_info
+
+    save_pickle(path=f"{output_path}/all_graphs.pkl", obj=all_graphs)
 
 
