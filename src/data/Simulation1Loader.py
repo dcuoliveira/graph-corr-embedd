@@ -1,15 +1,14 @@
 import os
 import numpy as np
 import torch
-import pandas as pd
 from torch_geometric.utils.convert import from_networkx
 from torch_geometric.data import Data
 
 from utils.conn_data import load_pickle
 
-class ExamplesLoader(object):
+class Simulation1Loader(object):
     """
-    
+
     """
     
     def __init__(self, example_name):
@@ -29,7 +28,7 @@ class ExamplesLoader(object):
         self.n_nodes = self.graph_data["Node"]
         self.data = self.graph_data["torch_graph_data"]
     
-DEBUG = False
+DEBUG = True
 
 if __name__ == "__main__":
     if DEBUG:
