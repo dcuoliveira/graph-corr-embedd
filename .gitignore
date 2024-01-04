@@ -1,5 +1,7 @@
 # data tmp
 notebooks/tmp/*
+data/inputs/simulation1/*
+data/outputs/simulation1/*
 
 # vscode
 .DS_Store
