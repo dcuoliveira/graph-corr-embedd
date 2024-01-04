@@ -2,7 +2,9 @@ import numpy as np
 import torch.nn as nn
 from scipy.stats import spearmanr
 
-class Spectrum(nn.Module):
+from stats.Stats import Stats
+
+class Spectrum(Stats):
     def __init__(self):
         super(Spectrum, self).__init__()
 
