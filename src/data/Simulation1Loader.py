@@ -33,7 +33,7 @@ class Simulation1Loader(object):
     def create_graph_loader(self, batch_size: int=1):
         graph_data_list = []
 
-        for tag, info in self.graph_data.items():
+        for i, (tag, info) in enumerate(self.graph_data.items()):
             graph1 = info['graph1']
             graph2 = info['graph2']
             target = info['cov']
