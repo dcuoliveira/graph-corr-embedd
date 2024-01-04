@@ -30,7 +30,7 @@ class GraphSim:
 
         return p
 
-    def update_seed(self):
+    def update_seed(self, seed: None):
         """
         Update random seed.
         
@@ -40,7 +40,7 @@ class GraphSim:
         Returns:
             None
         """
-        self.seed = np.random.randint(0, 100000)
+        self.seed = np.random.randint(0, 100000) if seed is not None else seed
 
     def simulate_erdos(self, n: int, prob: float):
         """
