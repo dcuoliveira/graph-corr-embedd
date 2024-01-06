@@ -24,3 +24,26 @@ class Stats:
 
         correlation, _ = torch.spearmanr(x, y)
         return correlation
+
+    def compute_eigenvalues(self, adj):
+        """
+        Computer the eigenvalues of a matrix.
+
+        Parameters
+        ----------
+        adj: torch.Tensor
+            Matrix
+
+        Returns
+        -------
+        eigenvalues: torch.Tensor
+            Eigenvalues of the matrix
+
+        """
+
+        if adj.shape[0] == adj.shape[1]:
+            eigenvalues = torch.linalg.eigvalsh(adj)
+        else:
+            eigenvalues = torch.linalg.eigvalsh(adj @ adj.T)
+            
+        return eigenvalues
