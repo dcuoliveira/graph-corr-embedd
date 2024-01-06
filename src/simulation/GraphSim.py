@@ -30,7 +30,7 @@ class GraphSim:
 
         return p
 
-    def update_seed(self, seed: None):
+    def update_seed(self, seed: int=None):
         """
         Update random seed.
         
