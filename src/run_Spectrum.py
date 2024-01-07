@@ -24,8 +24,8 @@ if __name__ == '__main__':
 
     # define model
     model = Spectrum()
-    covs = []
-    true_covs = []
+    pred = []
+    true = []
     for data in loader:
 
         # get inputs
@@ -40,5 +40,20 @@ if __name__ == '__main__':
         cov = model.compute_spearman_correlation(x=embeddings1, y=embeddings2)
 
         # store results
-        covs.append(cov)
-        true_covs.append(data.y)
+        pred.append(cov)
+        true.append(data.y)
+    
+    pred = torch.stack(pred)
+    true = torch.stack(true)
+    results = {
+        "pred": pred,
+        "true": true
+    }
+
+    # check if file exists
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.model_name}"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    # save file
+    save_pickle(path=f"{output_path}/pred.pkl", obj=results)
