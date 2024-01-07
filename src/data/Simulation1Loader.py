@@ -26,13 +26,7 @@ class Simulation1Loader(object):
         super().__init__()
     
         self.name = name
-
-        import time
-
-        start = time.time()
         self._read_data()
-        print("Time to load data 1: ", (time.time() - start) / 60)
-
 
     def _read_data(self):
         self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "all_graph_info.pkl"))
@@ -114,4 +108,4 @@ if __name__ == "__main__":
         graph_loader = loader.create_graph_loader_parallel()
 
         # time to minutes
-        print("Time to load data 2: ", (time.time() - start) / 60)
+        print("Time to load and process data: ", (time.time() - start) / 60)
