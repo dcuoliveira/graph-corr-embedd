@@ -1,9 +1,10 @@
 import os
-import numpy as np
 import torch
 from torch_geometric.utils.convert import from_networkx
 from torch_geometric.data import Data, DataLoader
-from torch_geometric.utils import from_networkx, to_dense_adj
+from torch_geometric.utils import from_networkx
+import networkx as nx
+import concurrent.futures
 
 import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
@@ -25,7 +26,13 @@ class Simulation1Loader(object):
         super().__init__()
     
         self.name = name
+
+        import time
+
+        start = time.time()
         self._read_data()
+        print("Time to load data 1: ", (time.time() - start) / 60)
+
 
     def _read_data(self):
         self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "all_graph_info.pkl"))
@@ -39,8 +46,8 @@ class Simulation1Loader(object):
             target = info['cov']
 
             # Convert NetworkX graphs to adjacency matrices
-            adj1 = to_dense_adj(from_networkx(graph1).edge_index)[0]
-            adj2 = to_dense_adj(from_networkx(graph2).edge_index)[0]
+            adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
+            adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
 
             # Use rows of adjacency matrices as features
             x1 = adj1
@@ -60,9 +67,51 @@ class Simulation1Loader(object):
 
         return loader
     
-DEBUG = False
+    def process_graph_pair(self, tag, info):
+        graph1 = info['graph1']
+        graph2 = info['graph2']
+        target = info['cov']
+
+        adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
+        adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
+
+        x1 = adj1
+        x2 = adj2
+
+        edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
+        x = torch.cat([x1, x2], dim=0)
+
+        data = Data(x=x, edge_index=edge_index, y=torch.tensor([target], dtype=torch.float))
+
+        return data
+
+    def create_graph_loader_parallel(self, batch_size: int = 1, num_cpus: int = None):
+        if num_cpus is None:
+            num_cpus = (os.cpu_count() - 1)  # Get the number of CPUs available
+
+        graph_data_list = []
+
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_cpus) as executor:
+            futures = [executor.submit(self.process_graph_pair, tag, info) for tag, info in self.graph_data.items()]
+
+            for future in concurrent.futures.as_completed(futures):
+                data = future.result()
+                graph_data_list.append(data)
+
+        loader = DataLoader(graph_data_list, batch_size=batch_size, shuffle=True)
+
+        return loader
+
+DEBUG = True
 
 if __name__ == "__main__":
     if DEBUG:
+        import time
+
+        start = time.time()
+
         loader = Simulation1Loader()
-        graph_loader = loader.create_graph_loader()
+        graph_loader = loader.create_graph_loader_parallel()
+
+        # time to minutes
+        print("Time to load data 2: ", (time.time() - start) / 60)
