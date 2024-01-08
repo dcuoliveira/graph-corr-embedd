@@ -96,7 +96,7 @@ class Simulation1Loader(object):
 
         return loader
 
-DEBUG = True
+DEBUG = False
 
 if __name__ == "__main__":
     if DEBUG:
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         start = time.time()
 
         loader = Simulation1Loader()
-        graph_loader = loader.create_graph_loader_parallel()
+        graph_loader = loader.create_graph_loader()
 
         # time to minutes
         print("Time to load and process data: ", (time.time() - start) / 60)
