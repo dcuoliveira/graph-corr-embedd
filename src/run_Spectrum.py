@@ -56,4 +56,4 @@ if __name__ == '__main__':
         os.makedirs(output_path)
 
     # save file
-    save_pickle(path=f"{output_path}/pred.pkl", obj=results)
+    save_pickle(path=f"{output_path}/results.pkl", obj=results)
