@@ -1,4 +1,5 @@
 import torch
+from scipy.stats import spearmanr
 
 class Stats:
     def __init__(self):
@@ -22,7 +23,7 @@ class Stats:
 
         """
 
-        correlation, _ = torch.spearmanr(x, y)
+        correlation = spearmanr(x, y)
         return correlation
 
     def compute_eigenvalues(self, adj):
