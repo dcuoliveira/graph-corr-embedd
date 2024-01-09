@@ -43,8 +43,10 @@ if __name__ == '__main__':
         pred.append(cov)
         true.append(data.y)
     
-    pred = torch.stack(pred)
-    true = torch.stack(true)
+    # pred list to tensor
+    pred = torch.tensor(pred)
+    true = torch.tensor(true)
+
     results = {
         "pred": pred,
         "true": true
