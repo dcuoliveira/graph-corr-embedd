@@ -22,14 +22,17 @@ class Simulation1Loader(object):
 
     """
     
-    def __init__(self, name: str="simulation1"):
+    def __init__(self, name: str="simulation1", sample: bool=False):
         super().__init__()
     
         self.name = name
-        self._read_data()
+        self._read_data(sample=sample)
 
-    def _read_data(self):
-        self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "all_graph_info.pkl"))
+    def _read_data(self, sample: bool=False):
+        if sample:
+            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "sample_graph_info.pkl"))
+        else:
+            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "all_graph_info.pkl"))
 
     def create_graph_loader(self, batch_size: int=1):
         graph_data_list = []
