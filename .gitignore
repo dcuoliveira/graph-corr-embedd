@@ -1,7 +1,6 @@
 # data tmp
 notebooks/tmp/*
 src/data/inputs/simulation1/*.pkl
-src/data/outputs/simulation1/*
 
 # vscode
 .DS_Store
