@@ -24,7 +24,7 @@ class Stats:
         """
 
         correlation = spearmanr(x, y)
-        return correlation
+        return correlation.statistic
 
     def compute_eigenvalues(self, adj):
         """
