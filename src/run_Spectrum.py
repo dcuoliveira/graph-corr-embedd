@@ -34,11 +34,11 @@ if __name__ == '__main__':
         x2 = data.x[1, :, :]
 
         # forward pass
-        embeddings1 = model.forward(x1)
-        embeddings2 = model.forward(x2)
+        z1 = model.forward(x1)
+        z2 = model.forward(x2)
 
         # compute covariance between embeddings (true target)
-        cov = model.compute_spearman_correlation(x=embeddings1, y=embeddings2)
+        cov = model.compute_spearman_correlation(x=z1, y=z2)
 
         # store results
         pred.append(cov)
