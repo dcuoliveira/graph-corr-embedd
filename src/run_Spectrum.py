@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="spectrum")
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 
@@ -19,7 +20,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # define dataset
-    sim = Simulation1Loader(name=args.dataset_name)
+    sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
     loader = sim.create_graph_loader(batch_size=args.batch_size)
 
     # define model
@@ -58,4 +59,7 @@ if __name__ == '__main__':
         os.makedirs(output_path)
 
     # save file
-    save_pickle(path=f"{output_path}/results.pkl", obj=results)
+    if args.sample:
+        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+    else:
+        save_pickle(path=f"{output_path}/results.pkl", obj=results)
