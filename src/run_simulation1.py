@@ -8,6 +8,7 @@ from utils.conn_data import save_pickle
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1")
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
 
@@ -28,6 +29,12 @@ if __name__ == "__main__":
 
     # init graph sim class
     gs = GraphSim(graph_name=args.graph_name)
+
+    # check if sample graph
+    if args.sample:
+        covs_xy = covs_xy[:10]
+        args.n_simulations = 1
+        args.n_graphs = 1
 
     # start simulation procedure
     all_graphs = {}
@@ -59,6 +66,8 @@ if __name__ == "__main__":
 
                 all_graphs[f"{np.round(s, 1)}_{i}_{j}"] = graph_info
 
-    save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
-
+    if not args.sample:
+        save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
+    else:
+        save_pickle(path=f"{output_path}/sample_graph_info.pkl", obj=all_graphs)
 
