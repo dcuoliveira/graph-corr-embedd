@@ -47,8 +47,8 @@ class Simulation1Loader(object):
             adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
 
             # Use rows of adjacency matrices as features
-            x1 = adj1
-            x2 = adj2
+            x1 = adj1.type(torch.float32)
+            x2 = adj2.type(torch.float32)
 
             # Concatenate the edge indices for both graphs
             edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
