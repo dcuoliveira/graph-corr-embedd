@@ -1,6 +1,5 @@
 import torch
 import torch.optim as optim
-from torch.utils.data.dataloader import DataLoader
 import argparse
 import os
 from tqdm import tqdm
@@ -17,17 +16,17 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
+
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
-
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     loss_reg = LossReg()
 
     # initialize tqdm
-    pbar = tqdm(total=args.epochs)
+    pbar = tqdm(range(args.epochs))
 
     xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
@@ -89,7 +88,7 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute covariance between embeddings (true target)
-            cov = model1.compute_spearman_correlation(x=z1, y=z2)
+            cov = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # compute loss functions I
             ll1 = loss_local.forward(adj=x1, z=z1)
@@ -129,19 +128,19 @@ if __name__ == '__main__':
 
         # update tqdm
         pbar.update(1)
-        pbar.set_description("Epoch: %d, Train Loss I & II: %.4f - %.4f" % (epoch, loss_train_tot1, loss_train_tot2))
+        pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, loss_train_tot1, loss_train_tot2))
 
         # save loss
-        epochs_loss_train_tot.append(loss_train_tot.detach())
-        epochs_loss_global_tot.append(loss_global_tot.detach())
-        epochs_loss_local_tot.append(loss_local_tot.detach())
-        epochs_loss_reg_tot.append(loss_reg_tot.detach())
+        epochs_loss_train_tot.append([loss_train_tot1.detach(), loss_train_tot2.detach()])
+        epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_train_tot2.detach()])
+        epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_train_tot2.detach()])
+        epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_train_tot2.detach()])
 
-
+    pbar = tqdm(enumerate(loader), total=len(loader))
     pred = []
     true = []
     with torch.no_grad():
-        for data in loader:
+        for s, data in pbar:
             # get inputs
             x1 = data.x[0, :, :]
             x2 = data.x[1, :, :]
@@ -160,4 +159,32 @@ if __name__ == '__main__':
             # store results
             pred.append(cov)
             true.append(data.y)
+
+            # update tqdm
+            pbar.update(1)
+            pbar.set_description(f"Test Sample: {s}")
+        
+    # pred list to tensor
+    pred = torch.tensor(pred)
+    true = torch.tensor(true)
+
+    results = {
+        "pred": pred,
+        "true": true,
+        "train_total_loss": epochs_loss_train_tot,
+        "train_local_loss": epochs_loss_local_tot,
+        "train_global_loss": epochs_loss_global_tot,
+        "train_reg_loss": epochs_loss_reg_tot,
+    }
+
+    # check if file exists
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.model_name}"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    # save file
+    if args.sample:
+        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+    else:
+        save_pickle(path=f"{output_path}/results.pkl", obj=results)
 
