@@ -6,26 +6,28 @@ import os
 from tqdm import tqdm
 
 from models.SDNE import SDNE
+from data.Simulation1Loader import Simulation1Loader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
-from data.ExamplesLoader import ExamplesLoader
-from data.DataLoad import Dataload
 
 from utils.conn_data import save_pickle
 
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="cora")
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
-parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=100)
-parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=1000)
+parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
+
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
@@ -34,82 +36,100 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # load graph data
-    el =  ExamplesLoader(example_name=args.dataset_name)
-    G, Adj, n_nodes = el.G, el.Adj, el.n_nodes
+    # define dataset
+    sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
+    loader = sim.create_graph_loader(batch_size=args.batch_size)
 
     # define model
-    model = SDNE(node_size=n_nodes,
-                 n_hidden=args.n_hidden,
-                 n_layers_enc=args.n_layers_enc,
-                 n_layers_dec=args.n_layers_dec,
-                 bias_enc=True,
-                 bias_dec=True,
-                 droput=args.dropout)
+    model1 = SDNE(node_size=args.n_nodes,
+                  n_hidden=args.n_hidden,
+                  n_layers_enc=args.n_layers_enc,
+                  n_layers_dec=args.n_layers_dec,
+                  bias_enc=True,
+                  bias_dec=True,
+                  droput=args.dropout)
+    
+    model2 = SDNE(node_size=args.n_nodes,
+                  n_hidden=args.n_hidden,
+                  n_layers_enc=args.n_layers_enc,
+                  n_layers_dec=args.n_layers_dec,
+                  bias_enc=True,
+                  bias_dec=True,
+                  droput=args.dropout)
+    
+    # define optimizer
+    opt1 = optim.Adam(model1.parameters(), lr=args.learning_rate)
+    opt2 = optim.Adam(model2.parameters(), lr=args.learning_rate)
 
     # define loss functions
     loss_local = LossLocal()
     loss_global = LossGlobal()
     loss_reg = LossReg()
 
-    # define optimizer
-    opt = optim.Adam(model.parameters(), lr=args.learning_rate)
-
-    # create data loader
-    Data = Dataload(Adj, n_nodes)
-    Data = DataLoader(Data, batch_size=args.batch_size, shuffle=True)
-
-    # train model
-    model.train()
-
     # initialize tqdm
     pbar = tqdm(total=args.epochs)
 
     xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
-    for epoch in range(1, args.epochs + 1):
+    for epoch in pbar:
 
-        loss_train_tot, loss_global_tot, loss_local_tot, loss_reg_tot = 0, 0, 0, 0
-        for index in Data:
+        loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1 = 0, 0, 0, 0
+        loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2 = 0, 0, 0, 0
+        for data in loader:
+            # get inputs
+            x1 = data.x[0, :, :]
+            x2 = data.x[1, :, :]
 
-            # select batch info
-            adj_batch = Adj[index]
-            adj_mat = adj_batch[:, index]
-            b_mat = torch.ones_like(adj_batch)
-            b_mat[adj_batch != 0] = args.beta
+            # create global loss parameter matrix
+            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+            b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
 
-            # set previous gradients to zero
-            opt.zero_grad()
+            # forward pass
+            x1_hat, z1, z1_norm = model1.forward(x1)
+            x2_hat, z2, z2_norm = model2.forward(x2)
 
-            # forward pass model
-            x, z, z_norm = model(adj_batch)
+            # compute covariance between embeddings (true target)
+            cov = model1.compute_spearman_correlation(x=z1, y=z2)
 
-            # save outputs
-            xs_train.append(x.detach())
-            zs_train.append(z.detach())
-            z_norms_train.append(z_norm.detach())
+            # compute loss functions I
+            ll1 = loss_local.forward(adj=x1, z=z1)
+            lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
+            lr1 = loss_reg.forward(model=model1)
 
-            # compute loss functions
-            ll = loss_local.forward(adj=adj_mat, z=z)
-            lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-            lr = loss_reg.forward(model=model)
+            ## compute total loss
+            ## lg >>> lr > ll
+            lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
 
-            # compute total loss
-            # lg >>> lr > ll
-            lt = (args.alpha * lg) + ll + (args.nu * lr)
+            loss_train_tot1 += lt1
+            loss_global_tot1 += lg1
+            loss_local_tot1 += ll1
+            loss_reg_tot1 += lr1
 
-            loss_train_tot += lt
-            loss_global_tot += lg
-            loss_local_tot += ll
-            loss_reg_tot += lr
+            ## backward pass
+            lt1.backward()
+            opt1.step()
 
-            # backward pass
-            lt.backward()
-            opt.step()
+            # compute loss functions II
+            ll2 = loss_local.forward(adj=x2, z=z2)
+            lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
+            lr2 = loss_reg.forward(model=model2)
+
+            ## compute total loss
+            ## lg >>> lr > ll
+            lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
+
+            loss_train_tot2 += lt2
+            loss_global_tot2 += lg2
+            loss_local_tot2 += ll2
+            loss_reg_tot2 += lr2
+
+            ## backward pass
+            lt2.backward()
+            opt2.step()
 
         # update tqdm
         pbar.update(1)
-        pbar.set_description("Epoch: %d, Train Loss: %.4f" % (epoch, loss_train_tot))
+        pbar.set_description("Epoch: %d, Train Loss I & II: %.4f - %.4f" % (epoch, loss_train_tot1, loss_train_tot2))
 
         # save loss
         epochs_loss_train_tot.append(loss_train_tot.detach())
@@ -117,69 +137,27 @@ if __name__ == '__main__':
         epochs_loss_local_tot.append(loss_local_tot.detach())
         epochs_loss_reg_tot.append(loss_reg_tot.detach())
 
-    pbar.close()
 
-    # evaluate model
-    model.eval()
-
-    xs_eval, zs_eval, z_norms_eval = [], [], []
+    pred = []
+    true = []
     with torch.no_grad():
+        for data in loader:
+            # get inputs
+            x1 = data.x[0, :, :]
+            x2 = data.x[1, :, :]
 
-        # forward pass model
-        adj_batch = Adj
-        adj_mat = adj_batch[:, :]
-        b_mat = torch.ones_like(adj_batch)
-        b_mat[adj_batch != 0] = args.beta
-        x, z, z_norm = model(adj_batch)
+            # create global loss parameter matrix
+            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+            b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
 
-        # save outputs
-        xs_eval.append(x.detach())
-        zs_eval.append(z.detach())
-        z_norms_eval.append(z_norm.detach())
+            # forward pass
+            x1_hat, z1, z1_norm = model1.forward(x1)
+            x2_hat, z2, z2_norm = model2.forward(x2)
 
-        # compute loss functions
-        ll = loss_local.forward(adj=adj_mat, z=z)
-        lg = loss_global.forward(adj=adj_batch, x=x, b_mat=b_mat)
-        lr = loss_reg.forward(model=model)
+            # compute covariance between embeddings (true target)
+            cov = model1.compute_spearman_correlation(x=z1, y=z2)
 
-        # compute total loss
-        loss_eval_tot = (args.alpha * lg) + ll + (args.nu * lr)
+            # store results
+            pred.append(cov)
+            true.append(data.y)
 
-    # save results
-    results = {
-
-        "xs_train": xs_train[-1],
-        "zs_train": zs_train[-1],
-        "z_norms_train": z_norms_train[-1],
-
-        "epochs_train_loss": epochs_loss_train_tot,
-        "epochs_global_loss": epochs_loss_global_tot,
-        "epochs_local_loss": epochs_loss_local_tot,
-        "epochs_reg_loss": epochs_loss_reg_tot,
-        "model": model, 
-
-        "xs_eval": xs_eval[-1],
-        "zs_eval": zs_eval[-1],
-        "z_norms_eval": z_norms_eval[-1],
-
-        "args": args
-
-    }
-
-    # check if dir exists
-    if not os.path.exists(os.path.join(os.path.dirname(__file__), "data", "outputs", args.dataset_name, args.model_name)):
-        os.makedirs(os.path.join(os.path.dirname(__file__), "data", "outputs", args.dataset_name, args.model_name))
-
-    pbar = tqdm(total=len(results))
-    for key, value in results.items():
-        save_pickle(obj={key: value},
-                    path=os.path.join(os.path.dirname(__file__),
-                                    "data",
-                                    "outputs",
-                                    args.dataset_name,
-                                    args.model_name,
-                                    f"{key}.pickle"))
-        pbar.update(1)
-        pbar.set_description(f"Saving {key}")
-
-    pbar.close()
