@@ -2,10 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.parameter import Parameter
-from torch.nn.modules.module import Module
 
-class SDNE(nn.Module):
+from stats.Stats import Stats
+
+class SDNE(nn.Module, Stats):
     def __init__(self,
                  node_size: int,
                  n_hidden: int,
@@ -15,6 +15,12 @@ class SDNE(nn.Module):
                  bias_dec: bool,
                  droput: float):
         super(SDNE, self).__init__()
+
+        # parameters
+        self.node_size = node_size
+        self.n_hidden = n_hidden
+        self.n_layers_dec = n_layers_dec
+        self.n_layers_enc = n_layers_enc
 
         # encoder
         encoder_layers = []
