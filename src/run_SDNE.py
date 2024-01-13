@@ -68,6 +68,7 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(range(args.epochs))
 
+    train_pred, train_true = [], []
     xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
     for epoch in pbar:
@@ -89,6 +90,10 @@ if __name__ == '__main__':
 
             # compute covariance between embeddings (true target)
             cov = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+
+            # store pred and true values
+            train_pred.append(cov)
+            train_true.append(data.y)
 
             # compute loss functions I
             ll1 = loss_local.forward(adj=x1, z=z1)
@@ -136,9 +141,13 @@ if __name__ == '__main__':
         epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_train_tot2.detach()])
         epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_train_tot2.detach()])
 
+    # pred list to tensor
+    train_pred = torch.tensor(train_pred)
+    train_true = torch.tensor(train_true)
+
     pbar = tqdm(enumerate(loader), total=len(loader))
-    pred = []
-    true = []
+    test_pred = []
+    test_true = []
     with torch.no_grad():
         for s, data in pbar:
             # get inputs
@@ -154,24 +163,26 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute covariance between embeddings (true target)
-            cov = model1.compute_spearman_correlation(x=z1, y=z2)
+            cov = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
-            # store results
-            pred.append(cov)
-            true.append(data.y)
+            # store pred and true values
+            test_pred.append(cov)
+            test_true.append(data.y)
 
             # update tqdm
             pbar.update(1)
             pbar.set_description(f"Test Sample: {s}")
         
     # pred list to tensor
-    pred = torch.tensor(pred)
-    true = torch.tensor(true)
+    test_pred = torch.tensor(test_pred)
+    test_true = torch.tensor(test_true)
 
     results = {
         "args": args,
-        "pred": pred,
-        "true": true,
+        "train_pred": train_pred,
+        "train_true": train_true,
+        "test_pred": test_pred,
+        "test_true": test_true,
         "train_total_loss": epochs_loss_train_tot,
         "train_local_loss": epochs_loss_local_tot,
         "train_global_loss": epochs_loss_global_tot,
