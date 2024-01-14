@@ -27,6 +27,7 @@ if __name__ == '__main__':
     model = Spectrum()
     pred = []
     true = []
+    embeddings = []
     for data in loader:
 
         # get inputs
@@ -43,14 +44,17 @@ if __name__ == '__main__':
         # store results
         pred.append(cov)
         true.append(data.y)
+        embeddings.append([z1, z2])
     
     # pred list to tensor
     pred = torch.tensor(pred)
     true = torch.tensor(true)
+    embeddings = torch.tensor(embeddings)
 
     results = {
         "pred": pred,
-        "true": true
+        "true": true,
+        "embeddings": embeddings
     }
 
     # check if file exists
