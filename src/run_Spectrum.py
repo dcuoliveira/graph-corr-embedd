@@ -27,6 +27,7 @@ if __name__ == '__main__':
     model = Spectrum()
     pred = []
     true = []
+    inputs = []
     embeddings = []
     for data in loader:
 
@@ -44,16 +45,19 @@ if __name__ == '__main__':
         # store results
         pred.append(cov)
         true.append(data.y)
+        inputs.append([x1, x2])
         embeddings.append([z1, z2])
     
     # pred list to tensor
     pred = torch.tensor(pred)
     true = torch.tensor(true)
+    inputs = torch.tensor(inputs)
     embeddings = torch.tensor(embeddings)
 
     results = {
         "pred": pred,
         "true": true,
+        "inputs": inputs,
         "embeddings": embeddings
     }
 
