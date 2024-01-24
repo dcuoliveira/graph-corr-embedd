@@ -1,5 +1,9 @@
-python run_SDNE.py --model_name sdne-10ed --n_layers_enc 10 --n_layers_dec 10 --n_hidden 500 &
-python run_SDNE.py --model_name sdne-20ed --n_layers_enc 20 --n_layers_dec 20 --n_hidden 500 &
-python run_SDNE.py --model_name sdne-30ed --n_layers_enc 30 --n_layers_dec 30 --n_hidden 500 &
-python run_SDNE.py --model_name sdne-40ed --n_layers_enc 40 --n_layers_dec 40 --n_hidden 500 &
-python run_SDNE.py --model_name sdne-50ed --n_layers_enc 50 --n_layers_dec 50 --n_hidden 500 &
+python run_SDNE.py --model_name sdne --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
+python run_SDNE.py --model_name sdne --n_hidden 30 --n_layers_enc 1 --n_layers_dec 1
+python run_SDNE.py --model_name sdne --n_hidden 40 --n_layers_enc 1 --n_layers_dec 1
+python run_SDNE.py --model_name sdne --n_hidden 50 --n_layers_enc 1 --n_layers_dec 1
+python run_SDNE.py --model_name sdne --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1
+python run_SDNE.py --model_name sdne --n_hidden 100 --n_layers_enc 5 --n_layers_dec 5
+python run_SDNE.py --model_name sdne --n_hidden 100 --n_layers_enc 10 --n_layers_dec 10
+python run_SDNE.py --model_name sdne --n_hidden 100 --n_layers_enc 15 --n_layers_dec 15
+python run_SDNE.py --model_name sdne --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
