@@ -45,7 +45,7 @@ if __name__ == '__main__':
         # store results
         pred.append(cov)
         true.append(data.y)
-        inputs.append([x1, x2])
+        inputs.append([x1.numpy(), x2.numpy()])
         embeddings.append([z1, z2])
     
     # pred list to tensor
