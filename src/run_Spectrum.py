@@ -54,11 +54,14 @@ if __name__ == '__main__':
     inputs = torch.tensor(inputs)
     embeddings = torch.tensor(embeddings)
 
+    inputs = {
+        "inputs": inputs,
+        "embeddings": embeddings,
+    }
+
     results = {
         "pred": pred,
         "true": true,
-        "inputs": inputs,
-        "embeddings": embeddings
     }
 
     # check if file exists
@@ -68,6 +71,9 @@ if __name__ == '__main__':
 
     # save file
     if args.sample:
+        save_pickle(path=f"{output_path}/sample_inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+
     else:
+        save_pickle(path=f"{output_path}/inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
