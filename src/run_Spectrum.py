@@ -5,7 +5,7 @@ import os
 from models.Spectrum import Spectrum
 from data.Simulation1Loader import Simulation1Loader
 
-from utils.conn_data import save_pickle
+from utils.conn_data import save_pickle, save_inputs_piecewise
 
 parser = argparse.ArgumentParser()
 
@@ -14,6 +14,7 @@ parser.add_argument('--model_name', type=str, help='Model name.', default="spect
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
+parser.add_argument('--save_inputs', type=str, help='Boolean if to save inputs.', default=False)
 
 if __name__ == '__main__':
 
@@ -54,11 +55,6 @@ if __name__ == '__main__':
     inputs = torch.tensor(inputs)
     embeddings = torch.tensor(embeddings)
 
-    inputs = {
-        "inputs": inputs,
-        "embeddings": embeddings,
-    }
-
     results = {
         "pred": pred,
         "true": true,
@@ -69,11 +65,16 @@ if __name__ == '__main__':
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    # save inputs and embeddings   
+    if args.save_inputs:
+        save_inputs_piecewise(inputs=inputs,
+                              sample=args.sample,
+                              embeddings=embeddings,
+                              path=output_path)
+    
     # save file
     if args.sample:
-        save_pickle(path=f"{output_path}/sample_inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
 
     else:
-        save_pickle(path=f"{output_path}/inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
