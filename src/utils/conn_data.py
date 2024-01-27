@@ -1,5 +1,6 @@
 import pickle
 import joblib
+import os
 
 def save_pickle(path: str,
                 obj: dict):
@@ -19,3 +20,29 @@ def load_pickle(path: str):
             target_dict = pickle.load(handle)
 
     return target_dict
+
+def save_inputs_piecewise(inputs,
+                          embeddings,
+                          path: str,
+                          sample: bool=False):
+    
+    total = inputs.shape[0]
+
+    if total != embeddings.shape[0]:
+        raise ValueError("Inputs and embeddings must have the same number of samples.")
+    
+    if sample:
+        path = os.path.join(path, "sample_inputs")
+    else:
+        path = os.path.join(path, "inputs")
+
+    # checkif dir exists
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    for i in range(total):
+        tmp_inputs = {
+            "inputs": inputs[i],
+            "embeddings": embeddings[i],
+        }
+        save_pickle(path=os.path.join(path, f"inputs_{i}.pkl"), obj=tmp_inputs)
