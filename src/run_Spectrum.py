@@ -6,21 +6,23 @@ from models.Spectrum import Spectrum
 from data.Simulation1Loader import Simulation1Loader
 
 from utils.conn_data import save_pickle, save_inputs_piecewise
+from utils.parsers import str_2_bool
 
 parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="spectrum")
-parser.add_argument('--sample', type=bool, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
-parser.add_argument('--save_inputs', type=bool, help='Boolean if to save inputs.', default=False)
+parser.add_argument('--save_inputs', type=str, help='Boolean if to save inputs.', default=False)
 
 if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print(f"model_name: {args.model_name}, dataset_name: {args.dataset_name}, sample: {args.sample}, save_inputs: {args.save_inputs}")
+    args.sample = str_2_bool(args.sample)
+    args.save_inputs = str_2_bool(args.save_inputs)
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
