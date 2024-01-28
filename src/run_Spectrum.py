@@ -11,10 +11,10 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="spectrum")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=bool, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
-parser.add_argument('--save_inputs', type=str, help='Boolean if to save inputs.', default=False)
+parser.add_argument('--save_inputs', type=bool, help='Boolean if to save inputs.', default=False)
 
 if __name__ == '__main__':
 
