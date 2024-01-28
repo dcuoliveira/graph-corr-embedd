@@ -1,8 +1,11 @@
 
-def str_2_bool(str):
-    if str.lower() == "false":
+def str_2_bool(val):
+
+    val = str(val)
+
+    if val.lower() == "false":
         return False
-    elif str.lower() == "true": 
+    elif val.lower() == "true": 
         return True
     else:
-        raise Exception("Invalid boolean value: {}".format(str))
+        raise Exception("Invalid boolean value: {}".format(val))
