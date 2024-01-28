@@ -11,6 +11,7 @@ from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
 
 from utils.conn_data import save_pickle
+from utils.parsers import str_2_bool
 
 parser = argparse.ArgumentParser()
 
@@ -34,6 +35,8 @@ parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparamet
 if __name__ == '__main__':
 
     args = parser.parse_args()
+
+    args.sample = str_2_bool(args.sample)
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
