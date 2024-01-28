@@ -20,6 +20,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    print(f"model_name: {args.model_name}, dataset_name: {args.dataset_name}, sample: {args.sample}, save_inputs: {args.save_inputs}")
+
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
     loader = sim.create_graph_loader(batch_size=args.batch_size)

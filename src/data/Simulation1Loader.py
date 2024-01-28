@@ -7,7 +7,7 @@ import networkx as nx
 import concurrent.futures
 
 import sys
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
+# sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
 
 from utils.conn_data import load_pickle
 
