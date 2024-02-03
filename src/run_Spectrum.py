@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import argparse
 import os
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         true.append(data.y)
         
         # check if cov is nan
-        if torch.isnan(cov):
+        if np.isnan(cov):
             inputs.append([x1.numpy(), x2.numpy()])
             embeddings.append([z1, z2])
     
