@@ -52,9 +52,9 @@ class Simulation1Loader(object):
 
             # Concatenate the edge indices for both graphs
             edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
-            x = torch.stack([x1, x2], dim=0)
 
             # concatenate x1 and x2 creating a new dimension
+            x = torch.stack([x1, x2], dim=0)
 
 
             # Create a single Data object
