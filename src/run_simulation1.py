@@ -4,6 +4,7 @@ import numpy as np
 
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
+from utils.activation_functions import sigmoid
 
 parser = argparse.ArgumentParser()
 
@@ -39,7 +40,10 @@ if __name__ == "__main__":
     # start simulation procedure
     all_graphs = {}
     for s in covs_xy:
+
+        graphs_given_cov = []
         for i in range(args.n_simulations):
+
             for j in range(args.n_graphs):
 
                 # gen seed
@@ -48,14 +52,17 @@ if __name__ == "__main__":
 
                 # generate probability of edge creation
                 p = gs.get_p_from_bivariate_gaussian(s=s)
+                p = sigmoid(p.__abs__())
 
                 # simulate graph
-                graph1 = gs.simulate_erdos(n=args.n_nodes, prob=np.abs(p[0,0]))
-                graph2 = gs.simulate_erdos(n=args.n_nodes, prob=np.abs(p[0,1]))
+                graph1 = gs.simulate_erdos(n=args.n_nodes, prob=p[0,0])
+                graph2 = gs.simulate_erdos(n=args.n_nodes, prob=p[0,1])
 
                 # save graph
-                graph_info = {
+                sim_graph_info = {
                     
+                    "n_simulations": i,
+                    "n_graphs": j,
                     "graph1": graph1,
                     "graph2": graph2,
                     "seed": save_seed,
@@ -64,7 +71,9 @@ if __name__ == "__main__":
                     
                 }
 
-                all_graphs[f"{np.round(s, 1)}_{i}_{j}"] = graph_info
+                graphs_given_cov.append(sim_graph_info)
+
+        all_graphs[f"{np.round(s, 1)}"] = graphs_given_cov
 
     if not args.sample:
         save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
