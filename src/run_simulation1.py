@@ -1,6 +1,7 @@
 import os
 import argparse
 import numpy as np
+from tqdm import tqdm
 
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 
     # start simulation procedure
     all_graphs = {}
-    for s in covs_xy:
+    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name}"):
 
         graphs_given_cov = []
         for i in range(args.n_simulations):
