@@ -1,7 +1,7 @@
 import os
 import sys
 
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import torch
 from torch_geometric.utils.convert import from_networkx
@@ -11,7 +11,7 @@ import networkx as nx
 import concurrent.futures
 import numpy as np
 
-from src.utils.conn_data import load_pickle
+from utils.conn_data import load_pickle
 
 class Simulation1Loader(object):
     """
