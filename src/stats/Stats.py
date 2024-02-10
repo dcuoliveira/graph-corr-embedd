@@ -5,9 +5,9 @@ class Stats:
     def __init__(self):
         pass
 
-    def compute_spearman_correlation(self, x, y):
+    def compute_spearman_rank_correlation(self, x, y):
         """
-        Computer the Spearman correlation between two tensors.
+        Computer the Spearman rank correlation between two tensors.
 
         Parameters
         ----------
