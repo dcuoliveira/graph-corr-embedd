@@ -13,21 +13,10 @@ class Spectrum(Stats):
             eigenvalues = np.linalg.eigvalsh(adj)
         else:
             eigenvalues = np.linalg.eigvalsh(adj @ adj.T)
-        return eigenvalues
 
-    def largest_eigenvalue(self, adj):
-        eigenvalues = self.forward(adj)
-        return np.max(eigenvalues)
+        max_eigenvalue = np.max(eigenvalues)
 
-    def compute_largest_eigenvalues(self, graphs):
-        return [self.largest_eigenvalue(g) for g in graphs]
-
-    def calculate_spearman_correlation(self, g1, g2):
-        largest_eigenvalues_g1 = self.compute_largest_eigenvalues(g1)
-        largest_eigenvalues_g2 = self.compute_largest_eigenvalues(g2)
-        correlation, _ = spearmanr(largest_eigenvalues_g1, largest_eigenvalues_g2)
-        return correlation
-
+        return max_eigenvalue
 
 if __name__ == "__main__":
     pass
