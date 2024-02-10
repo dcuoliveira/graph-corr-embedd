@@ -35,13 +35,14 @@ if __name__ == "__main__":
     # check if sample graph
     if args.sample:
         covs_xy = covs_xy[:10]
-        args.n_simulations = 1
+        args.n_simulations = 2
         args.n_graphs = 1
 
     # start simulation procedure
     all_graphs = {}
     for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name}"):
 
+        s = np.round(s, 1)
         for n in range(10, args.n_nodes, 10):
 
             graphs_given_cov = []
@@ -61,6 +62,9 @@ if __name__ == "__main__":
                     graph1 = gs.simulate_erdos(n=n, prob=p[0,0])
                     graph2 = gs.simulate_erdos(n=n, prob=p[0,1])
 
+                    # round cov
+                    cov = np.round(s, 1)
+
                     # save graph
                     sim_graph_info = {
                         
@@ -76,7 +80,7 @@ if __name__ == "__main__":
 
                     graphs_given_cov.append(sim_graph_info)
 
-            all_graphs[f"{np.round(s, 1)}_{n}"] = graphs_given_cov
+            all_graphs[f"{s}_{n}"] = graphs_given_cov
 
     if not args.sample:
         save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
