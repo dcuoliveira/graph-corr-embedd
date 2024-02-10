@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # check if sample graph
     if args.sample:
         covs_xy = covs_xy[:10]
-        args.n_simulations = 1
+        args.n_simulations = 5
         args.n_graphs = 1
 
     # start simulation procedure
