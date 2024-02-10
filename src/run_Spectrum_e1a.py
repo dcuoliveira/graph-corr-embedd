@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import argparse
 import os
+import pandas as pd
 
 from models.Spectrum import Spectrum
 from data.Simulation1aLoader import Simulation1aLoader
@@ -30,10 +31,7 @@ if __name__ == '__main__':
         
         # define model
         model = Spectrum()
-        pred = []
-        true = []
-        inputs = []
-        embeddings = []
+        outputs = []
         for data in loader:
 
             # get inputs
@@ -44,35 +42,25 @@ if __name__ == '__main__':
             z1 = model.forward(x1)
             z2 = model.forward(x2)
 
-            # compute covariance between embeddings (true target)
-            cov = model.compute_spearman_correlation(x=z1, y=z2)
-
-            # store results
-            pred.append(cov)
-            true.append(data.y)
-            
-            # check if cov is nan
-            if np.isnan(cov):
-                inputs.append([x1.numpy(), x2.numpy()])
-                embeddings.append([z1, z2])
+            # save results
+            outputs.append({"true": data.y.item(), "sr1": z1, "sr2": z2})
+        outputs_df = pd.DataFrame(outputs)
         
-        # pred list to tensor
-        pred = torch.tensor(pred)
-        true = torch.tensor(true)
+        # compute covariance between embeddings (true target)
+        for true_cov in outputs_df["true"].unique():
 
-        if len(inputs) > 0:
-            inputs = torch.tensor(inputs)
-        else:
-            inputs = None
-        
-        if len(embeddings) > 0:
-            embeddings = torch.tensor(embeddings)
-        else:
-            embeddings = None
+            tmp_outputs_df = outputs_df.loc[outputs_df["true"] == true_cov]
+            pred_cov = model.compute_spearman_rank_correlation(x=tmp_outputs_df['sr1'].values,
+                                                               y=tmp_outputs_df['sr2'].values)
+
+            outputs_df.loc[outputs_df["true"] == true_cov, "pred"] = pred_cov
+
+        # store results
+        pred = torch.tensor(outputs_df["pred"].values)
+        true = torch.tensor(outputs_df["true"].values)
 
         inputs = {
-            "inputs": inputs,
-            "embeddings": embeddings,
+            "inputs": outputs_df
         }
 
         results = {
