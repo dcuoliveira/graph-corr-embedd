@@ -39,8 +39,8 @@ class Simulation1Loader(object):
     def create_graph_loader(self, batch_size: int=1):
         graph_data_list = []
 
-        for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
-            cov_val = float(cov_tag)
+        for i, (corr_tag, graph_list) in enumerate(self.graph_data.items()):
+            corr_val = float(corr_tag)
 
             for n_sim, graph_pair_info in enumerate(graph_list):
 
@@ -61,50 +61,15 @@ class Simulation1Loader(object):
                 # concatenate x1 and x2 creating a new dimension
                 x = torch.stack([x1, x2], dim=0)
 
-                if cov_val != np.round(graph_pair_info["cov"], 1):
-                    raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
+                if corr_val != np.round(graph_pair_info["cov"], 1):
+                    raise ValueError(f"Covariance value does not match: {corr_val}, {n_sim}")
                 
                 # Create a single Data object
-                data = Data(x=x, edge_index=edge_index, y=torch.tensor([cov_val], dtype=torch.float))
+                data = Data(x=x, edge_index=edge_index, y=torch.tensor([corr_val], dtype=torch.float))
 
                 graph_data_list.append(data)
 
         # Create DataLoader
-        loader = DataLoader(graph_data_list, batch_size=batch_size, shuffle=True)
-
-        return loader
-    
-    def process_graph_pair(self, tag, info):
-        graph1 = info['graph1']
-        graph2 = info['graph2']
-        target = info['cov']
-
-        adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
-        adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
-
-        x1 = adj1
-        x2 = adj2
-
-        edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
-        x = torch.cat([x1, x2], dim=0)
-
-        data = Data(x=x, edge_index=edge_index, y=torch.tensor([target], dtype=torch.float))
-
-        return data
-
-    def create_graph_loader_parallel(self, batch_size: int = 1, num_cpus: int = None):
-        if num_cpus is None:
-            num_cpus = (os.cpu_count() - 1)  # Get the number of CPUs available
-
-        graph_data_list = []
-
-        with concurrent.futures.ProcessPoolExecutor(max_workers=num_cpus) as executor:
-            futures = [executor.submit(self.process_graph_pair, tag, info) for tag, info in self.graph_data.items()]
-
-            for future in concurrent.futures.as_completed(futures):
-                data = future.result()
-                graph_data_list.append(data)
-
         loader = DataLoader(graph_data_list, batch_size=batch_size, shuffle=True)
 
         return loader
