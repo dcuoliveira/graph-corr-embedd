@@ -4,7 +4,7 @@ import argparse
 import os
 from tqdm import tqdm
 
-from models.StackedSparseAutoencoder import StackedSparseAutoencoder
+from models.SAE import StackedSparseAutoencoder
 from data.Simulation1Loader import Simulation1Loader
 from utils.conn_data import save_pickle
 from utils.parsers import str_2_bool
