@@ -74,7 +74,7 @@ if __name__ == "__main__":
                         "graph2": graph2,
                         "seed": save_seed,
                         "p": p,
-                        "cov": s
+                        "corr": s # cov = corr becaus variances are 1
                         
                     }
 
