@@ -16,7 +16,7 @@ parser.add_argument('--graph_name', type=str, help='Graph name to be generated.'
 
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
 parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=1000)
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=500)
 
 if __name__ == "__main__":
     args = parser.parse_args()
