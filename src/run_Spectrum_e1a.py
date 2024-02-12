@@ -1,8 +1,8 @@
 import torch
-import numpy as np
 import argparse
 import os
 import pandas as pd
+from tqdm import tqdm
 
 from models.Spectrum import Spectrum
 from data.Simulation1aLoader import Simulation1aLoader
@@ -27,7 +27,8 @@ if __name__ == '__main__':
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     loaders = sim.create_graph_loader(batch_size=args.batch_size)
-    for n_nodes, loader in loaders.items():
+    pbar = tqdm(loaders.items(), desc=f"Running Spectrum for {args.dataset_name}")
+    for n_nodes, loader in pbar:
         
         # define model
         model = Spectrum()
@@ -81,3 +82,5 @@ if __name__ == '__main__':
         else:
             save_pickle(path=f"{output_path}/inputs.pkl", obj=inputs)
             save_pickle(path=f"{output_path}/results.pkl", obj=results)
+
+        pbar.update(1)
