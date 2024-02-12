@@ -91,11 +91,11 @@ if __name__ == '__main__':
             x1_hat, z1, z1_norm = model1.forward(x1)
             x2_hat, z2, z2_norm = model2.forward(x2)
 
-            # compute covariance between embeddings (true target)
-            cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            # compute correlation between embeddings (true target)
+            corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            train_pred.append(cov)
+            train_pred.append(corr)
             train_true.append(data.y)
 
             # compute loss functions I
@@ -165,11 +165,11 @@ if __name__ == '__main__':
             x1_hat, z1, z1_norm = model1.forward(x1)
             x2_hat, z2, z2_norm = model2.forward(x2)
 
-            # compute covariance between embeddings (true target)
-            cov = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            # compute correlation between embeddings (true target)
+            corr = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            test_pred.append(cov)
+            test_pred.append(corr)
             test_true.append(data.y)
 
             # update tqdm

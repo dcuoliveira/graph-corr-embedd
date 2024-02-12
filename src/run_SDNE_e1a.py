@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     loaders = sim.create_graph_loader(batch_size=args.batch_size)
-    
+    pbar = tqdm(loaders.items(), desc=f"Running SDNE for {args.dataset_name}")
     for n_nodes, loader in loaders.items():
 
         # define model
@@ -69,13 +69,10 @@ if __name__ == '__main__':
         loss_global = LossGlobal()
         loss_reg = LossReg()
 
-        # initialize tqdm
-        pbar = tqdm(range(args.epochs))
-
         train_pred, train_true = [], []
         xs_train, zs_train, z_norms_train = [], [], []
         epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
-        for epoch in pbar:
+        for epoch in range(args.epochs):
 
             loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1 = 0, 0, 0, 0
             loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2 = 0, 0, 0, 0
@@ -92,11 +89,11 @@ if __name__ == '__main__':
                 x1_hat, z1, z1_norm = model1.forward(x1)
                 x2_hat, z2, z2_norm = model2.forward(x2)
 
-                # compute covariance between embeddings (true target)
-                cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+                # compute correlation between embeddings (true target)
+                corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
                 # store pred and true values
-                train_pred.append(cov)
+                train_pred.append(corr)
                 train_true.append(data.y)
 
                 # compute loss functions I
@@ -135,10 +132,6 @@ if __name__ == '__main__':
                 lt2.backward()
                 opt2.step()
 
-            # update tqdm
-            pbar.update(1)
-            pbar.set_description("Running n_nodes: %d, Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (n_nodes, epoch, loss_train_tot1, loss_train_tot2))
-
             # save loss
             epochs_loss_train_tot.append([loss_train_tot1.detach(), loss_train_tot2.detach()])
             epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_train_tot2.detach()])
@@ -149,11 +142,10 @@ if __name__ == '__main__':
         train_pred = torch.tensor(train_pred)
         train_true = torch.tensor(train_true)
 
-        pbar = tqdm(enumerate(loader), total=len(loader))
         test_pred = []
         test_true = []
         with torch.no_grad():
-            for s, data in pbar:
+            for s, data in enumerate(loader):
                 # get inputs
                 x1 = data.x[0, :, :]
                 x2 = data.x[1, :, :]
@@ -166,16 +158,12 @@ if __name__ == '__main__':
                 x1_hat, z1, z1_norm = model1.forward(x1)
                 x2_hat, z2, z2_norm = model2.forward(x2)
 
-                # compute covariance between embeddings (true target)
-                cov = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+                # compute correlation between embeddings (true target)
+                corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
                 # store pred and true values
-                test_pred.append(cov)
+                test_pred.append(corr)
                 test_true.append(data.y)
-
-                # update tqdm
-                pbar.update(1)
-                pbar.set_description(f"Test Sample: {s}")
             
         # pred list to tensor
         test_pred = torch.tensor(test_pred)
@@ -205,4 +193,7 @@ if __name__ == '__main__':
             save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
         else:
             save_pickle(path=f"{output_path}/results.pkl", obj=results)
+
+        pbar.update(1)
+
 
