@@ -41,7 +41,7 @@ if __name__ == '__main__':
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     loaders = sim.create_graph_loader(batch_size=args.batch_size)
     pbar = tqdm(loaders.items(), desc=f"Running SDNE for {args.dataset_name}")
-    for n_nodes, loader in loaders.items():
+    for n_nodes, loader in pbar:
 
         # define model
         model1 = SDNE(node_size=n_nodes,
