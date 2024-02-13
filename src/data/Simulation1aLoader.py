@@ -65,7 +65,7 @@ class Simulation1aLoader(object):
                 # concatenate x1 and x2 creating a new dimension
                 x = torch.stack([x1, x2], dim=0)
 
-                if corr_val != np.round(graph_pair_info["cov"], 1):
+                if corr_val != np.round(graph_pair_info["corr"], 1):
                     raise ValueError(f"Covariance value does not match: {corr_val}, {n_sim}")
                 
                 # Create a single Data object
@@ -104,9 +104,12 @@ if __name__ == "__main__":
         import time
 
         start = time.time()
+        sample = True
+        dataset_name = "simulation1a"
+        batch_size = 1
 
-        loader = Simulation1aLoader(sample=True)
-        graph_loader = loader.create_graph_loader()
+        sim = Simulation1aLoader(name=dataset_name, sample=sample)
+        loader = sim.create_graph_loader(batch_size=batch_size)
 
         # time to minutes
         print("Time to load and process data: ", (time.time() - start) / 60)
