@@ -6,6 +6,7 @@ from tqdm import tqdm
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 from utils.activation_functions import sigmoid
+from utils.parsers import str_2_bool
 
 parser = argparse.ArgumentParser()
 
@@ -20,6 +21,8 @@ parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=500)
 
 if __name__ == "__main__":
     args = parser.parse_args()
+
+    args.sample = str_2_bool(args.sample)
 
     # Check if path exists
     output_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
@@ -75,13 +78,13 @@ if __name__ == "__main__":
                         "graph2": graph2,
                         "seed": save_seed,
                         "p": p,
-                        "corr": s # cov = corr becaus variances are 1
+                        "corr": cov # cov = corr becaus variances are 1
                         
                     }
 
                     graphs_given_cov.append(sim_graph_info)
 
-            all_graphs[f"{s}_{n}"] = graphs_given_cov
+            all_graphs[f"{cov}_{n}"] = graphs_given_cov
 
     if not args.sample:
         save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
