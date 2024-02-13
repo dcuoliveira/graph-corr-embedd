@@ -37,6 +37,7 @@ if __name__ == "__main__":
         covs_xy = covs_xy[:10]
         args.n_simulations = 2
         args.n_graphs = 1
+        args.n_nodes = 20
 
     # start simulation procedure
     all_graphs = {}
