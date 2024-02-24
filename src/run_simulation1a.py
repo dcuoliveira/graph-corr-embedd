@@ -17,7 +17,7 @@ parser.add_argument('--graph_name', type=str, help='Graph name to be generated.'
 
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
 parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=500)
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=1000)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name}"):
 
         s = np.round(s, 1)
-        for n in range(10, args.n_nodes + 10, 10):
+        for n in range(10, args.n_nodes + 10, 50):
 
             graphs_given_cov = []
             for i in range(args.n_simulations):
