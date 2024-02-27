@@ -3,7 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class StackedSparseAutoencoder(nn.Module):
+from stats.Stats import Stats
+class StackedSparseAutoencoder(nn.Module, Stats):
     def __init__(self,
                  input_size: int,
                  hidden_sizes: list,
