@@ -1,0 +1,2 @@
+
+python3 run_simulattion2a.py
