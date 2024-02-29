@@ -6,6 +6,7 @@ from tqdm import tqdm
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 from utils.activation_functions import sigmoid
+from utils.parsers import str_2_bool
 
 parser = argparse.ArgumentParser()
 
@@ -20,6 +21,8 @@ parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 
 if __name__ == "__main__":
     args = parser.parse_args()
+
+    args.sample = str_2_bool(args.sample)
 
     # Check if path exists
     output_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
