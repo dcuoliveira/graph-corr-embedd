@@ -44,10 +44,10 @@ if __name__ == "__main__":
 
     # start simulation procedure
     all_graphs = {}
-    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name}"):
+    for s_idx, s in enumerate(covs_xy):
 
         s = np.round(s, 1)
-        for n in range(10, args.n_nodes + 10, 50):
+        for n in tqdm(range(10, args.n_nodes + 10, 50), total=int(args.n_nodes / 50), desc=f"Simulating cov_idx={s_idx} graphs for {args.simulation_name}"):
 
             graphs_given_cov = []
             for i in range(args.n_simulations):
