@@ -1,1 +1,1 @@
-python run_Spectrum.py
+python run_Spectrum.py  --sample False
