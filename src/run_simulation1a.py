@@ -43,7 +43,7 @@ if __name__ == "__main__":
         args.n_nodes = 100
 
     # start simulation procedure
-    all_graphs = {}
+    # all_graphs = {}
     for s_idx, s in enumerate(covs_xy):
 
         s = np.round(s, 1)
@@ -84,10 +84,11 @@ if __name__ == "__main__":
 
                     graphs_given_cov.append(sim_graph_info)
 
-            all_graphs[f"{cov}_{n}"] = graphs_given_cov
+            # all_graphs[f"{cov}_{n}"] = graphs_given_cov
+            save_pickle(path=f"{output_path}/{cov}_{n}_graph_info.pkl", obj=graphs_given_cov)
 
-    if not args.sample:
-        save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
-    else:
-        save_pickle(path=f"{output_path}/sample_graph_info.pkl", obj=all_graphs)
+    # if not args.sample:
+    #     save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
+    # else:
+    #     save_pickle(path=f"{output_path}/sample_graph_info.pkl", obj=all_graphs)
 
