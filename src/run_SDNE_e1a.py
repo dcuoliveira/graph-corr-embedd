@@ -212,6 +212,3 @@ if __name__ == '__main__':
         # delte graph data
         sim.delete_data()
 
-        pbar.update(1)
-
-
