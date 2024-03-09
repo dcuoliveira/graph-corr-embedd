@@ -26,18 +26,18 @@ class SDNE(nn.Module, Stats):
         encoder_layers = []
         for i in range(n_layers_enc + 1):
             if i == 0:
-                encoder_layers.append(nn.Linear(node_size, n_hidden // 2, bias=bias_enc))
+                encoder_layers.append(nn.Linear(node_size, node_size // 2, bias=bias_enc))
             else:
-                encoder_layers.append(nn.Linear(n_hidden // 2, n_hidden // 2, bias=bias_enc))
+                encoder_layers.append(nn.Linear(node_size // 2, node_size // 2, bias=bias_enc))
         self.encoder = nn.Sequential(*encoder_layers)
 
         # decoder
         decoder_layers = []
         for i in range(n_layers_dec + 1):
-            if (i == 0) and (n_layers_dec == 1):
-                decoder_layers.append(nn.Linear(n_hidden // 2, node_size, bias=bias_dec))
-            elif (i == 0) and (n_layers_dec > 1):
-                decoder_layers.append(nn.Linear(n_hidden // 2, n_hidden, bias=bias_dec))
+            if (i == 0) and (n_layers_dec == 0):
+                decoder_layers.append(nn.Linear(node_size // 2, node_size, bias=bias_dec))
+            elif (i == 0) and (n_layers_dec >= 1):
+                decoder_layers.append(nn.Linear(node_size // 2, n_hidden, bias=bias_dec))
             elif (i > 0) and  (i < n_layers_dec) and (n_layers_dec > 1):
                 decoder_layers.append(nn.Linear(n_hidden, n_hidden, bias=bias_dec))
             else:
