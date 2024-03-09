@@ -12,6 +12,7 @@ import networkx as nx
 import numpy as np
 
 from utils.conn_data import load_pickle
+from run_simulation1a import run_simulation1a
 
 class Simulation1aLoader(object):
     """
@@ -28,13 +29,13 @@ class Simulation1aLoader(object):
         super().__init__()
     
         self.name = name
-        self._read_data(sample=sample)
+        self.sample = sample
 
-    def _read_data(self, sample: bool=False):
-        if sample:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "sample_graph_info.pkl"))
-        else:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, "all_graph_info.pkl"))
+    def read_data(self):
+        self.graph_data = load_pickle(self.target_file_name)
+
+    def delete_data(self):
+        os.remove(self.target_file_name)
 
     def create_graph_loader(self, batch_size: int=1):
 
@@ -43,8 +44,8 @@ class Simulation1aLoader(object):
         count = 0
         for i, (corr_tag, graph_list) in enumerate(self.graph_data.items()):
 
-            corr_val = float(corr_tag.split("_")[0])
-            n_nodes = int(corr_tag.split("_")[1])
+            corr_val = float(corr_tag)
+            n_nodes = int(self.target_file_name.split(".")[-2].split("nnodes")[-1])
 
             for n_sim, graph_pair_info in enumerate(graph_list):
 
@@ -96,6 +97,63 @@ class Simulation1aLoader(object):
             loaders[n_nodes] = loader
 
         return loaders
+    
+    def create_graph_loader_old(self, batch_size: int=1):
+
+        graph_data_list = []
+
+        for i, (corr_tag, graph_list) in enumerate(self.graph_data.items()):
+            corr_val = float(corr_tag)
+            n_nodes = int(self.target_file_name.split(".")[-2].split("nnodes")[-1])
+
+            for n_sim, graph_pair_info in enumerate(graph_list):
+
+                graph1 = graph_pair_info['graph1']
+                graph2 = graph_pair_info['graph2']
+
+                # Convert NetworkX graphs to adjacency matrices
+                adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
+                adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
+
+                # Use rows of adjacency matrices as features
+                x1 = adj1.type(torch.float32)
+                x2 = adj2.type(torch.float32)
+
+                # Concatenate the edge indices for both graphs
+                edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
+
+                # concatenate x1 and x2 creating a new dimension
+                x = torch.stack([x1, x2], dim=0)
+
+                if corr_val != np.round(graph_pair_info["corr"], 1):
+                    raise ValueError(f"Correlation value does not match: {corr_val}, {n_sim}")
+                
+                # Create a single Data object
+                data = Data(x=x,
+                            edge_index=edge_index,
+                            y=torch.tensor([corr_val], dtype=torch.float),
+                            n_nodes=n_nodes)
+
+                graph_data_list.append(data)
+
+        # Create DataLoader
+        loader = DataLoader(graph_data_list, batch_size=batch_size, shuffle=True)
+
+        return loader
+    
+    def simulate_graph(self, graph_name: str, n_simulations: int, n_graphs: int, n_nodes: int):
+
+        target_file_name = run_simulation1a(simulation_name=self.name,
+                                            graph_name=graph_name,
+                                            sample=self.sample,
+                                            n_simulations=n_simulations,
+                                            n_graphs=n_graphs,
+                                            n_nodes=n_nodes)
+        self.target_file_name = target_file_name
+
+        self.read_data()
+
+
 
 DEBUG = False
 
