@@ -31,6 +31,11 @@ parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparam
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
 
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=1000)
+parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
+parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
+parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
+
 if __name__ == '__main__':
 
     args = parser.parse_args()
@@ -39,9 +44,17 @@ if __name__ == '__main__':
 
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
-    loaders = sim.create_graph_loader(batch_size=args.batch_size)
-    pbar = tqdm(loaders.items(), desc=f"Running SDNE for {args.dataset_name}")
-    for n_nodes, loader in pbar:
+
+    for n_nodes in range(10, args.n_nodes + 10, 200): 
+
+        # simulate graph with specific number of nodes
+        sim.simulate_graph(graph_name=args.graph_name, n_simulations=args.n_simulations, n_graphs=args.n_graphs, n_nodes=n_nodes)
+        
+        # load graph data
+        sim.read_data()
+
+        # build loader
+        loader = sim.create_graph_loader_old(batch_size=args.batch_size)
 
         # define model
         model1 = SDNE(node_size=n_nodes,
@@ -72,7 +85,8 @@ if __name__ == '__main__':
         train_pred, train_true = [], []
         xs_train, zs_train, z_norms_train = [], [], []
         epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
-        for epoch in range(args.epochs):
+        pbar = tqdm(range(args.epochs), desc=f"Running SDNE on {args.dataset_name} with n_nodes={n_nodes}")
+        for epoch in pbar:
 
             loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1 = 0, 0, 0, 0
             loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2 = 0, 0, 0, 0
@@ -193,6 +207,10 @@ if __name__ == '__main__':
             save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
         else:
             save_pickle(path=f"{output_path}/results.pkl", obj=results)
+
+
+        # delte graph data
+        sim.delete_data()
 
         pbar.update(1)
 
