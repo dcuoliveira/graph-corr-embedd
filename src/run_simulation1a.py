@@ -1,31 +1,17 @@
 import os
-import argparse
 import numpy as np
 from tqdm import tqdm
 
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 from utils.activation_functions import sigmoid
-from utils.parsers import str_2_bool
 
-parser = argparse.ArgumentParser()
+source_path = os.path.dirname(__file__)
 
-parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
-parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1a")
-parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
-
-parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
-parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=1000)
-
-if __name__ == "__main__":
-    args = parser.parse_args()
-
-    args.sample = str_2_bool(args.sample)
+def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simulations: int, n_graphs: int, n_nodes: int):
 
     # Check if path exists
-    output_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
+    output_path = f"{source_path}/data/inputs/{simulation_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
@@ -33,62 +19,57 @@ if __name__ == "__main__":
     covs_xy = np.arange(-1, 1, 0.1)
 
     # init graph sim class
-    gs = GraphSim(graph_name=args.graph_name)
+    gs = GraphSim(graph_name=graph_name)
 
     # check if sample graph
-    if args.sample:
+    if sample:
         covs_xy = covs_xy[:10]
-        args.n_simulations = 2
-        args.n_graphs = 1
-        args.n_nodes = 100
+        n_simulations = 2
+        n_graphs = 1
+        n_nodes = 100
 
     # start simulation procedure
-    # all_graphs = {}
-    for s_idx, s in enumerate(covs_xy):
+    all_graphs = {}
+    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {simulation_name}"):
 
-        s = np.round(s, 1)
-        for n in tqdm(range(10, args.n_nodes + 10, 50), total=int(args.n_nodes / 50), desc=f"Simulating cov_idx={s_idx} graphs for {args.simulation_name}"):
+        graphs_given_cov = []
+        for i in range(n_simulations):
 
-            graphs_given_cov = []
-            for i in range(args.n_simulations):
+            for j in range(n_graphs):
 
-                for j in range(args.n_graphs):
+                # gen seed
+                gs.update_seed()
+                save_seed = gs.seed
 
-                    # gen seed
-                    gs.update_seed()
-                    save_seed = gs.seed
+                # generate probability of edge creation
+                p = gs.get_p_from_bivariate_gaussian(s=s)
+                p = sigmoid(p.__abs__())
 
-                    # generate probability of edge creation
-                    p = gs.get_p_from_bivariate_gaussian(s=s)
-                    p = sigmoid(p.__abs__())
+                # simulate graph
+                graph1 = gs.simulate_erdos(n=n_nodes, prob=p[0,0])
+                graph2 = gs.simulate_erdos(n=n_nodes, prob=p[0,1])
 
-                    # simulate graph
-                    graph1 = gs.simulate_erdos(n=n, prob=p[0,0])
-                    graph2 = gs.simulate_erdos(n=n, prob=p[0,1])
+                # save graph
+                sim_graph_info = {
+                    
+                    "n_simulations": i,
+                    "n_graphs": j,
+                    "graph1": graph1,
+                    "graph2": graph2,
+                    "seed": save_seed,
+                    "p": p,
+                    "corr": s # cov = corr becaus variances are 1
+                    
+                }
 
-                    # round cov
-                    cov = np.round(s, 1)
+                graphs_given_cov.append(sim_graph_info)
 
-                    # save graph
-                    sim_graph_info = {
-                        
-                        "n_simulations": i,
-                        "n_graphs": j,
-                        "graph1": graph1,
-                        "graph2": graph2,
-                        "seed": save_seed,
-                        "p": p,
-                        "corr": cov # cov = corr becaus variances are 1
-                        
-                    }
+        all_graphs[f"{np.round(s, 1)}"] = graphs_given_cov
 
-                    graphs_given_cov.append(sim_graph_info)
+    if not sample:
+        save_pickle(path=f"{output_path}/all_graph_info_nnodes{n_nodes}.pkl", obj=all_graphs)
+    else:
+        save_pickle(path=f"{output_path}/sample_graph_info_nnodes{n_nodes}.pkl", obj=all_graphs)
 
-            # all_graphs[f"{cov}_{n}"] = graphs_given_cov
-            save_pickle(path=f"{output_path}/{cov}_{n}_graph_info.pkl", obj=graphs_given_cov)
-
-    # if not args.sample:
-    #     save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
-    # else:
-    #     save_pickle(path=f"{output_path}/sample_graph_info.pkl", obj=all_graphs)
+    return f"{output_path}/all_graph_info_nnodes{n_nodes}.pkl"
 
