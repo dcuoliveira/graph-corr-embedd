@@ -61,8 +61,8 @@ class Simulation1Loader(object):
                 # concatenate x1 and x2 creating a new dimension
                 x = torch.stack([x1, x2], dim=0)
 
-                if corr_val != np.round(graph_pair_info["cov"], 1):
-                    raise ValueError(f"Covariance value does not match: {corr_val}, {n_sim}")
+                if corr_val != np.round(graph_pair_info["corr"], 1):
+                    raise ValueError(f"Correlation value does not match: {corr_val}, {n_sim}")
                 
                 # Create a single Data object
                 data = Data(x=x, edge_index=edge_index, y=torch.tensor([corr_val], dtype=torch.float))
