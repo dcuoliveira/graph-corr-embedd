@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import os
 import pandas as pd
+from tqdm import tqdm
 
 from models.Spectrum import Spectrum
 from data.Simulation1Loader import Simulation1Loader
@@ -31,7 +32,8 @@ if __name__ == '__main__':
     # define model
     model = Spectrum()
     outputs = []
-    for data in loader:
+    pbar = tqdm(loader, total=len(loader), desc="Running Spectrum model")
+    for data in pbar:
 
         # get inputs
         x1 = data.x[0, :, :]
