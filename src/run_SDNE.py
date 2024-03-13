@@ -166,7 +166,7 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute correlation between embeddings (true target)
-            corr = model1.compute_spearman_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
             test_pred.append(corr)
