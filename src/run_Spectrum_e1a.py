@@ -18,7 +18,7 @@ parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="spectrum")
 
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=1000)
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=10)
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
 parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
@@ -32,68 +32,60 @@ if __name__ == '__main__':
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
 
-    for n_nodes in range(10, args.n_nodes + 10, 200): 
+    # simulate graph with specific number of nodes
+    sim.simulate_graph(graph_name=args.graph_name, n_simulations=args.n_simulations, n_graphs=args.n_graphs, n_nodes=args.n_nodes)
 
-        # simulate graph with specific number of nodes
-        sim.simulate_graph(graph_name=args.graph_name, n_simulations=args.n_simulations, n_graphs=args.n_graphs, n_nodes=n_nodes)
-        
-        # load graph data
-        sim.read_data()
+    # build loader
+    loader = sim.create_graph_loader(batch_size=args.batch_size)
+    pbar = tqdm(loader, total=len(loader), desc=f"Running Spectrum for {args.dataset_name} with n_nodes={args.n_nodes}")
 
-        # build loader
-        loader = sim.create_graph_loader_old(batch_size=args.batch_size)
+    # define model
+    model = Spectrum()
+    outputs = []
+    for data in pbar:
 
-        # define model
-        model = Spectrum()
-        outputs = []
-        pbar = tqdm(loader, desc=f"Running SDNE on {args.dataset_name} with n_nodes={n_nodes}")
-        for data in loader:
+        # get inputs
+        x1 = data.x[0, :, :]
+        x2 = data.x[1, :, :]
 
-            # get inputs
-            x1 = data.x[0, :, :]
-            x2 = data.x[1, :, :]
+        # forward pass
+        z1 = model.forward(x1)
+        z2 = model.forward(x2)
 
-            # forward pass
-            z1 = model.forward(x1)
-            z2 = model.forward(x2)
+        # save results
+        outputs.append({"true": data.y.item(), "sr1": z1, "sr2": z2})
+    outputs_df = pd.DataFrame(outputs)
 
-            # save results
-            outputs.append({"true": data.y.item(), "sr1": z1, "sr2": z2})
-        outputs_df = pd.DataFrame(outputs)
+    # compute covariance between embeddings (true target)
+    for true_cov in outputs_df["true"].unique():
 
-        # compute covariance between embeddings (true target)
-        for true_cov in outputs_df["true"].unique():
+        tmp_outputs_df = outputs_df.loc[outputs_df["true"] == true_cov]
+        pred_cov = model.compute_spearman_rank_correlation(x=tmp_outputs_df['sr1'].values,
+                                                        y=tmp_outputs_df['sr2'].values)
 
-            tmp_outputs_df = outputs_df.loc[outputs_df["true"] == true_cov]
-            pred_cov = model.compute_spearman_rank_correlation(x=tmp_outputs_df['sr1'].values,
-                                                            y=tmp_outputs_df['sr2'].values)
+        outputs_df.loc[outputs_df["true"] == true_cov, "pred"] = pred_cov
 
-            outputs_df.loc[outputs_df["true"] == true_cov, "pred"] = pred_cov
+    # store results
+    pred = torch.tensor(outputs_df["pred"].values)
+    true = torch.tensor(outputs_df["true"].values)
 
-        # store results
-        pred = torch.tensor(outputs_df["pred"].values)
-        true = torch.tensor(outputs_df["true"].values)
+    inputs = {
+        "inputs": outputs_df
+    }
 
-        inputs = {
-            "inputs": outputs_df
-        }
+    results = {
+        "pred": pred,
+        "true": true,
+    }
 
-        results = {
-            "pred": pred,
-            "true": true,
-        }
+    # check if file exists
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.n_nodes}/{args.model_name}"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
-        # check if file exists
-        output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{n_nodes}/{args.model_name}"
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-
-        # save file
-        if args.sample:
-            save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
-        else:
-            save_pickle(path=f"{output_path}/results.pkl", obj=results)
-
-        # delte graph data
-        sim.delete_data()
+    # save file
+    if args.sample:
+        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+    else:
+        save_pickle(path=f"{output_path}/results.pkl", obj=results)
 
