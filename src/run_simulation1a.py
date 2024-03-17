@@ -30,7 +30,8 @@ def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simu
 
     # start simulation procedure
     all_graphs = {}
-    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {simulation_name}"):
+    pbar = tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {simulation_name} with n_nodes={n_nodes}")
+    for s in pbar:
 
         graphs_given_cov = []
         for i in range(n_simulations):
@@ -66,10 +67,5 @@ def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simu
 
         all_graphs[f"{np.round(s, 1)}"] = graphs_given_cov
 
-    if not sample:
-        save_pickle(path=f"{output_path}/all_graph_info_nnodes{n_nodes}.pkl", obj=all_graphs)
-    else:
-        save_pickle(path=f"{output_path}/sample_graph_info_nnodes{n_nodes}.pkl", obj=all_graphs)
-
-    return f"{output_path}/all_graph_info_nnodes{n_nodes}.pkl"
+    return all_graphs
 
