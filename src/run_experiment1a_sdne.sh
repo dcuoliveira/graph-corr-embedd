@@ -1,9 +1,12 @@
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 30 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 40 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 50 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 5 --n_layers_dec 5
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 10 --n_layers_dec 10
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 15 --n_layers_dec 15
-python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 200
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 1000
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 200
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --n_nodes 1000
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --n_nodes 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --n_nodes 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --n_nodes 200
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --n_nodes 1000
