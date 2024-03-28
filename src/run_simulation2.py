@@ -17,10 +17,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation2a")
-parser.add_argument('--graph_types', type=np.array, help='Graph name to be generated.', default=["erdos_renyi", "random_geometric", "watts_strogatz"])
+#parser.add_argument('--graph_types', type=np.array, help='Graph name to be generated.', default=["erdos_renyi", "random_geometric", "watts_strogatz"])
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
-parser.add_argument('--n_graphs', type=np.array, help='Number of graphs per simulation.', default=[10,20])
-parser.add_argument('--n_nodes', type=float, help='Number of nodes.', default=25)
+#parser.add_argument('--n_graphs', type=np.array, help='Number of graphs per simulation.', default=[10,20])
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=25)
 parser.add_argument('--covariance', type=float, help='Covariance.', default=0)
 
 def get_spearm_pvalues_baseline(params, n_graph, first_family, second_family, n_simulations):
@@ -174,6 +174,14 @@ def plot_roc_curves(graph_types, n_graphs, eigen, params, n_simulations):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    args.graph_types = [
+            "erdos_renyi",
+            "random_geometric",
+            #"random_regular",
+            "barabasi_albert",
+            #"watts_strogatz",
+        ]
+    args.n_graphs = [10, 20]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
