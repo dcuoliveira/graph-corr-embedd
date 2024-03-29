@@ -3,6 +3,7 @@ import torch.optim as optim
 import argparse
 import os
 from tqdm import tqdm
+from random import choices
 
 from models.SDNE import SDNE
 from data.Simulation1Loader import Simulation1Loader
@@ -21,6 +22,8 @@ parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
+parser.add_argument('--n_samples', type=int, help='Number of samples to test the model.', default=100)
+parser.add_argument('--k', type=int, help='Number of bootstrap samples.', default=100)
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
@@ -148,44 +151,62 @@ if __name__ == '__main__':
     train_pred = torch.tensor(train_pred)
     train_true = torch.tensor(train_true)
 
-    pbar = tqdm(enumerate(loader), total=len(loader))
-    test_pred = []
-    test_true = []
+    # define parameters for the random sampler
+    batch_indices = list(range(len(loader)))
+
+    pbar = tqdm(range(args.n_samples), total=args.n_samples+1)
+    bootstrap_test_pred = []
+    bootstrap_test_true = []
     with torch.no_grad():
-        for s, data in pbar:
-            # get inputs
-            x1 = data.x[0, :, :]
-            x2 = data.x[1, :, :]
+        for sample in pbar:
+            
+            # define random sampler
+            sampled_indices = choices(batch_indices, k=args.k)
 
-            # create global loss parameter matrix
-            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-            b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+            test_pred = []
+            test_true = []
+            for batch_idx in sampled_indices:
 
-            # forward pass
-            x1_hat, z1, z1_norm = model1.forward(x1)
-            x2_hat, z2, z2_norm = model2.forward(x2)
+                # retrieve the rondom batch
+                data = list(loader)[batch_idx]
 
-            # compute correlation between embeddings (true target)
-            corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+                # get inputs
+                x1 = data.x[0, :, :]
+                x2 = data.x[1, :, :]
 
-            # store pred and true values
-            test_pred.append(corr)
-            test_true.append(data.y)
+                # create global loss parameter matrix
+                b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+                b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+
+                # forward pass
+                x1_hat, z1, z1_norm = model1.forward(x1)
+                x2_hat, z2, z2_norm = model2.forward(x2)
+
+                # compute correlation between embeddings (true target)
+                corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+
+                # store pred and true values
+                test_pred.append(corr)
+                test_true.append(data.y)
+
+            # save test results to bootstrap list
+            bootstrap_test_pred.append(test_pred)
+            bootstrap_test_true.append(test_true)
 
             # update tqdm
             pbar.update(1)
-            pbar.set_description(f"Test Sample: {s}")
+            pbar.set_description(f"Test Sample: {sample}")
         
     # pred list to tensor
-    test_pred = torch.tensor(test_pred)
-    test_true = torch.tensor(test_true)
+    bootstrap_test_pred = torch.tensor(bootstrap_test_pred) # each column is a bootstrap sample
+    bootstrap_test_true = torch.tensor(bootstrap_test_true) # each column is a bootstrap sample
 
     results = {
         "args": args,
         "train_pred": train_pred,
         "train_true": train_true,
-        "test_pred": test_pred,
-        "test_true": test_true,
+        "bootstrap_test_pred": bootstrap_test_pred,
+        "bootstrap_test_true": bootstrap_test_true,
         "train_total_loss": epochs_loss_train_tot,
         "train_local_loss": epochs_loss_local_tot,
         "train_global_loss": epochs_loss_global_tot,
