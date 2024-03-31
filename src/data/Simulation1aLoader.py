@@ -41,8 +41,8 @@ class Simulation1aLoader(object):
 
         graph_data_list = []
 
-        for i, (corr_tag, graph_list) in enumerate(self.graph_data.items()):
-            corr_val = float(corr_tag)
+        for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
+            cov_val = float(cov_tag)
 
             for n_sim, graph_pair_info in enumerate(graph_list):
 
@@ -63,13 +63,13 @@ class Simulation1aLoader(object):
                 # concatenate x1 and x2 creating a new dimension
                 x = torch.stack([x1, x2], dim=0)
 
-                if corr_val != np.round(graph_pair_info["corr"], 1):
-                    raise ValueError(f"Correlation value does not match: {corr_val}, {n_sim}")
+                if cov_val != np.round(graph_pair_info["corr"], 1):
+                    raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
                 
                 # Create a single Data object
                 data = Data(x=x,
                             edge_index=edge_index,
-                            y=torch.tensor([corr_val], dtype=torch.float),
+                            y=torch.tensor([cov_val], dtype=torch.float),
                             n_nodes=self.n_nodes)
 
                 graph_data_list.append(data)
@@ -78,6 +78,45 @@ class Simulation1aLoader(object):
         loader = DataLoader(graph_data_list, batch_size=batch_size, shuffle=True)
 
         return loader
+    
+    def create_graph_list(self):
+
+        graph_data_list = []
+
+        for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
+            cov_val = float(cov_tag)
+
+            for n_sim, graph_pair_info in enumerate(graph_list):
+
+                graph1 = graph_pair_info['graph1']
+                graph2 = graph_pair_info['graph2']
+
+                # Convert NetworkX graphs to adjacency matrices
+                adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
+                adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
+
+                # Use rows of adjacency matrices as features
+                x1 = adj1.type(torch.float32)
+                x2 = adj2.type(torch.float32)
+
+                # Concatenate the edge indices for both graphs
+                edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
+
+                # concatenate x1 and x2 creating a new dimension
+                x = torch.stack([x1, x2], dim=0)
+
+                if cov_val != np.round(graph_pair_info["corr"], 1):
+                    raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
+                
+                # Create a single Data object
+                data = Data(x=x,
+                            edge_index=edge_index,
+                            y=torch.tensor([cov_val], dtype=torch.float),
+                            n_nodes=self.n_nodes)
+
+                graph_data_list.append(data)
+
+        return graph_data_list
     
     def simulate_graph(self, graph_name: str, n_simulations: int, n_graphs: int, n_nodes: int):
 
