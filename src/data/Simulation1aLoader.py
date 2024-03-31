@@ -112,7 +112,8 @@ class Simulation1aLoader(object):
                 data = Data(x=x,
                             edge_index=edge_index,
                             y=torch.tensor([cov_val], dtype=torch.float),
-                            n_nodes=self.n_nodes)
+                            n_simulations=graph_pair_info["n_simulations"],
+                            n_graphs=graph_pair_info["n_graphs"])
 
                 graph_data_list.append(data)
 
