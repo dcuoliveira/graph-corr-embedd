@@ -3,7 +3,7 @@ import torch.optim as optim
 import argparse
 import os
 from tqdm import tqdm
-from random import choices
+from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
 from data.Simulation1Loader import Simulation1Loader
@@ -18,12 +18,11 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
-parser.add_argument('--n_samples', type=int, help='Number of samples to test the model.', default=100)
-parser.add_argument('--k', type=int, help='Number of bootstrap samples.', default=100)
+parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
@@ -43,7 +42,8 @@ if __name__ == '__main__':
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
-    loader = sim.create_graph_loader(batch_size=args.batch_size)
+    train_loader = sim.create_graph_loader(batch_size=args.batch_size)
+    test_dataset_list = sim.create_graph_list()
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -74,14 +74,15 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(range(args.epochs))
 
-    train_pred, train_true = [], []
+    train_results = []
     xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
     for epoch in pbar:
 
         loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1 = 0, 0, 0, 0
         loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2 = 0, 0, 0, 0
-        for data in loader:
+        epoch_results = []
+        for data in train_loader:
             # get inputs
             x1 = data.x[0, :, :]
             x2 = data.x[1, :, :]
@@ -95,11 +96,10 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute correlation between embeddings (true target)
-            corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            train_pred.append(corr)
-            train_true.append(data.y)
+            epoch_results.append([cov, data.y])
 
             # compute loss functions I
             ll1 = loss_local.forward(adj=x1, z=z1)
@@ -137,6 +137,8 @@ if __name__ == '__main__':
             lt2.backward()
             opt2.step()
 
+        epoch_results = torch.tensor(epoch_results)
+
         # update tqdm
         pbar.update(1)
         pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, loss_train_tot1, loss_train_tot2))
@@ -146,67 +148,55 @@ if __name__ == '__main__':
         epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_train_tot2.detach()])
         epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_train_tot2.detach()])
         epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_train_tot2.detach()])
+        train_results.append(epoch_results)
 
     # pred list to tensor
-    train_pred = torch.tensor(train_pred)
-    train_true = torch.tensor(train_true)
+    train_results = torch.stack(train_results)
 
-    # define parameters for the random sampler
-    batch_indices = list(range(len(loader)))
-
-    pbar = tqdm(range(args.n_samples), total=args.n_samples+1)
-    bootstrap_test_pred = []
-    bootstrap_test_true = []
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
+    test_results = []
     with torch.no_grad():
-        for sample in pbar:
+        for n in pbar:
+
+            simulation_results = []
+            for cov in sim.covs:
+
+                filtered_data_list = [data for data in test_dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
+
+                embeddings = [] 
+                for data in filtered_loader:
+                    # get inputs
+                    x1 = data.x[0, :, :]
+                    x2 = data.x[1, :, :]
+
+                    # create global loss parameter matrix
+                    b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+                    b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+
+                    # forward pass
+                    x1_hat, z1, z1_norm = model1.forward(x1)
+                    x2_hat, z2, z2_norm = model2.forward(x2)
+                    embeddings.append(torch.stack((z1.flatten().detach(), z2.flatten().detach()), dim=1))
+
+                embeddings = torch.concat(embeddings)
+
+                pred_cov = model1.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
+
+                simulation_results.append([pred_cov, cov])
             
-            # define random sampler
-            sampled_indices = choices(batch_indices, k=args.k)
-
-            test_pred = []
-            test_true = []
-            for batch_idx in sampled_indices:
-
-                # retrieve the rondom batch
-                data = list(loader)[batch_idx]
-
-                # get inputs
-                x1 = data.x[0, :, :]
-                x2 = data.x[1, :, :]
-
-                # create global loss parameter matrix
-                b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-                b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
-
-                # forward pass
-                x1_hat, z1, z1_norm = model1.forward(x1)
-                x2_hat, z2, z2_norm = model2.forward(x2)
-
-                # compute correlation between embeddings (true target)
-                corr = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
-
-                # store pred and true values
-                test_pred.append(corr)
-                test_true.append(data.y)
-
-            # save test results to bootstrap list
-            bootstrap_test_pred.append(test_pred)
-            bootstrap_test_true.append(test_true)
-
-            # update tqdm
+            simulation_results = torch.tensor(simulation_results)
+            test_results.append(simulation_results)
+            
             pbar.update(1)
-            pbar.set_description(f"Test Sample: {sample}")
-        
-    # pred list to tensor
-    bootstrap_test_pred = torch.tensor(bootstrap_test_pred) # each column is a bootstrap sample
-    bootstrap_test_true = torch.tensor(bootstrap_test_true) # each column is a bootstrap sample
+            pbar.set_description(f"Test Simulation: {n}")
+            
+    test_results = torch.stack(test_results)
 
     results = {
         "args": args,
-        "train_pred": train_pred,
-        "train_true": train_true,
-        "bootstrap_test_pred": bootstrap_test_pred,
-        "bootstrap_test_true": bootstrap_test_true,
+        "train_results": train_results,
+        "test_results": test_results,
         "train_total_loss": epochs_loss_train_tot,
         "train_local_loss": epochs_loss_local_tot,
         "train_global_loss": epochs_loss_global_tot,
@@ -225,4 +215,3 @@ if __name__ == '__main__':
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
     else:
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
-

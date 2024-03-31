@@ -4,6 +4,7 @@ import argparse
 import os
 import pandas as pd
 from tqdm import tqdm
+from torch_geometric.data import DataLoader
 
 from models.Spectrum import Spectrum
 from data.Simulation1Loader import Simulation1Loader
@@ -18,6 +19,7 @@ parser.add_argument('--model_name', type=str, help='Model name.', default="spect
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
+parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 
 if __name__ == '__main__':
 
@@ -27,46 +29,45 @@ if __name__ == '__main__':
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
-    loader = sim.create_graph_loader(batch_size=args.batch_size)
+    dataset_list = sim.create_graph_list()
 
     # define model
     model = Spectrum()
-    outputs = []
-    pbar = tqdm(loader, total=len(loader), desc="Running Spectrum model")
-    for data in pbar:
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
+    train_test_results = []
+    for n in pbar:
 
-        # get inputs
-        x1 = data.x[0, :, :]
-        x2 = data.x[1, :, :]
+        simulation_results = []
+        for cov in sim.covs:
 
-        # forward pass
-        z1 = model.forward(x1)
-        z2 = model.forward(x2)
+            filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+            filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
-        # save results
-        outputs.append({"true": data.y.item(), "sr1": z1, "sr2": z2})
-    outputs_df = pd.DataFrame(outputs)
+            embeddings = [] 
+            for data in filtered_loader:
 
-    # compute covariance between embeddings (true target)
-    for true_cov in outputs_df["true"].unique():
+                # get inputs
+                x1 = data.x[0, :, :]
+                x2 = data.x[1, :, :]
 
-        tmp_outputs_df = outputs_df.loc[outputs_df["true"] == true_cov]
-        pred_cov = model.compute_spearman_rank_correlation(x=tmp_outputs_df['sr1'].values,
-                                                           y=tmp_outputs_df['sr2'].values)
+                # forward pass
+                z1 = model.forward(x1)
+                z2 = model.forward(x2)
 
-        outputs_df.loc[outputs_df["true"] == true_cov, "pred"] = pred_cov
+                embeddings.append([z1, z2])
+            embeddings = torch.tensor(embeddings)
+            pred_cov = model.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
 
-    # store results
-    pred = torch.tensor(outputs_df["pred"].values)
-    true = torch.tensor(outputs_df["true"].values)
+            simulation_results.append([pred_cov, cov])
+        simulation_results = torch.tensor(simulation_results)
 
-    inputs = {
-        "inputs": outputs_df
-    }
+        train_test_results.append(simulation_results)
+    train_test_results = torch.stack(train_test_results)
 
     results = {
-        "pred": pred,
-        "true": true,
+        "train_test_results": train_test_results,
+        "n_simulations": sim.n_simulations,
+        "covs": sim.covs
     }
 
     # check if file exists
@@ -76,9 +77,7 @@ if __name__ == '__main__':
     
     # save file
     if args.sample:
-        save_pickle(path=f"{output_path}/sample_inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
 
     else:
-        save_pickle(path=f"{output_path}/inputs.pkl", obj=inputs)
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
