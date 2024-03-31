@@ -116,6 +116,9 @@ class Simulation1aLoader(object):
 
                 graph_data_list.append(data)
 
+        self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
+        self.covs = np.unique([data.y.item() for data in graph_data_list])
+
         return graph_data_list
     
     def simulate_graph(self, graph_name: str, n_simulations: int, n_graphs: int, n_nodes: int):
