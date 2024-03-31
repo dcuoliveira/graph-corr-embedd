@@ -21,6 +21,7 @@ parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="s
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
+parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
