@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if args.sample:
         covs_xy = covs_xy[:10]
         args.n_simulations = 5
-        args.n_graphs = 1
+        args.n_graphs = 5
 
     # start simulation procedure
     all_graphs = {}
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                     "graph2": graph2,
                     "seed": save_seed,
                     "p": p,
-                    "corr": s # cov = corr becaus variances are 1
+                    "cov": s # cov = corr becaus variances are 1
                     
                 }
 
