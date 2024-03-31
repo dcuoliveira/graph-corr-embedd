@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import argparse
 import os
-import pandas as pd
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
