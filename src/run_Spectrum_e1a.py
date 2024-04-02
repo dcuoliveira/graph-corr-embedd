@@ -78,7 +78,7 @@ if __name__ == '__main__':
     }
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.n_nodes}/{model_name}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.n_nodes}/{args.model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
