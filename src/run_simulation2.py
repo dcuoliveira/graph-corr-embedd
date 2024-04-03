@@ -16,11 +16,11 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
-parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation2a")
+parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="teste2")
 #parser.add_argument('--graph_types', type=np.array, help='Graph name to be generated.', default=["erdos_renyi", "random_geometric", "watts_strogatz"])
-parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
+parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=100)
 #parser.add_argument('--n_graphs', type=np.array, help='Number of graphs per simulation.', default=[10,20])
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=25)
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=50)
 parser.add_argument('--covariance', type=float, help='Covariance.', default=0)
 
 def get_spearm_pvalues_baseline(params, n_graph, first_family, second_family, n_simulations):
@@ -36,7 +36,10 @@ def get_spearman_pvalues(eigenvalues_dict, first_family_name, second_family_name
     for i in range(n_simulations):
         first_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][0]
         second_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][1]
-        pvalues.append(spearmanr(first_family, second_family).pvalue)
+        # 'two-sided': the correlation is nonzero
+        # 'less': the correlation is negative (less than zero)
+        # 'greater':  the correlation is positive (greater than zero)
+        pvalues.append(spearmanr(first_family, second_family, alternative='two-sided').pvalue)
     return pvalues
 
 def simulation_graph_case(gs, theta, graph_name, n_nodes):
@@ -60,14 +63,18 @@ def get_dicts(n_graphs, graph_classes):
 def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, gs, p1, p2 ):
     embeddings1, embeddings2 = [], []
     for _ in range(n_graph):
+        # TODO: Put the parameters simulation here
+        gs = GraphSim(graph_name=graph_name1)  # It doesn't matter the graph_name here
+
         # Generate parameters and normalize then gen graph
         graph1  = simulation_graph_case(gs, p1, graph_name1, n_nodes=n_nodes)
         graph2  = simulation_graph_case(gs, p2, graph_name2, n_nodes=n_nodes)
         ##############
         # Fujita method
         # TODO: Try embedders
-        largest_eigenvalue1 = Spectrum().forward(nx.adjacency_matrix(graph1).A)
-        largest_eigenvalue2 = Spectrum().forward(nx.adjacency_matrix(graph2).A)
+        model = Spectrum()
+        largest_eigenvalue1 = model.forward(nx.adjacency_matrix(graph1).A)
+        largest_eigenvalue2 = model.forward(nx.adjacency_matrix(graph2).A)
         ############3##
 
         embeddings1.append(largest_eigenvalue1)
@@ -111,9 +118,14 @@ def run_simulation(n_graphs, n_simulations, n_nodes, covariance, graph_classes):
                 for _ in range(n_simulations):
                     #TODO: Should the vector of params be here
                     gs.update_seed()
-                    theta = gs.get_p_from_bivariate_gaussian(s=covariance)
-                    theta = sigmoid(np.abs(theta))  # normalize
+                    theta = np.abs(gs.get_p_from_bivariate_gaussian(s=covariance))
+                    ###
+                    #theta = sigmoid(np.abs(theta))  # normalize
+                    # Linear normalization
                     theta1, theta2 = theta[0,0], theta[0,1]
+                    normalization  = theta1 + theta2
+                    theta1, theta2 = theta1 / normalization, theta2 / normalization
+                    ###
 
                     embeddings1, embeddings2  = simulate_vector_graphs(n_graph, graph_name1, graph_name2,
                                                                        n_nodes, gs, theta1, theta2)
@@ -124,7 +136,7 @@ def run_simulation(n_graphs, n_simulations, n_nodes, covariance, graph_classes):
 
                     # Store the results
                     embed_dict[graph_name1][graph_name2][n_graph].append((embeddings1, embeddings2))
-                    params_dict[graph_name1][graph_name2][n_graph].append(theta[0])
+                    params_dict[graph_name1][graph_name2][n_graph].append([theta1, theta2])
 
     return embed_dict, params_dict
 
@@ -178,10 +190,10 @@ if __name__ == "__main__":
             "erdos_renyi",
             "random_geometric",
             #"random_regular",
-            "barabasi_albert",
+            #"barabasi_albert",
             #"watts_strogatz",
         ]
-    args.n_graphs = [10, 20]
+    args.n_graphs = [20]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
@@ -194,6 +206,7 @@ if __name__ == "__main__":
         os.makedirs(output_path)
 
     # Run the simulation
+    print(f'Running simulation... Cov = {args.covariance} N_simulations = {args.n_simulations} N_nodes = {args.n_nodes} Graph_types = {args.graph_types} N_graphs = {args.n_graphs}')
     eigen, params = run_simulation(args.n_graphs, args.n_simulations, args.n_nodes, args.covariance, args.graph_types)
     
     if not args.sample:
