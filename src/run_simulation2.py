@@ -18,18 +18,21 @@ parser.add_argument('--source_path', type=str, help='Source path for saving outp
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="teste2")
 #parser.add_argument('--graph_types', type=np.array, help='Graph name to be generated.', default=["erdos_renyi", "random_geometric", "watts_strogatz"])
-parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=100)
+parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=500)
 #parser.add_argument('--n_graphs', type=np.array, help='Number of graphs per simulation.', default=[10,20])
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=50)
-parser.add_argument('--covariance', type=float, help='Covariance.', default=0)
+parser.add_argument('--covariance', type=float, help='Covariance.', default=1)
 
-def get_spearm_pvalues_baseline(params, n_graph, first_family, second_family, n_simulations):
-    pvalues = []
-    for _ in range(n_simulations):
-        first_run = np.array(params[first_family][second_family][n_graph])[:,0]
-        second_run = np.array(params[first_family][second_family][n_graph])[:,1]
-        pvalues.append(spearmanr(first_run, second_run).pvalue)
-    return pvalues
+def get_spearman_rhos(eigenvalues_dict, first_family_name, second_family_name, n_simulations, n_graph):
+    rhos = []
+    for i in range(n_simulations):
+        first_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][0]
+        second_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][1]
+        # 'two-sided': the correlation is nonzero
+        # 'less': the correlation is negative (less than zero)
+        # 'greater':  the correlation is positive (greater than zero)
+        rhos.append(spearmanr(first_family, second_family, alternative='two-sided').statistic)
+    return rhos
 
 def get_spearman_pvalues(eigenvalues_dict, first_family_name, second_family_name, n_simulations, n_graph):
     pvalues = []
@@ -60,15 +63,25 @@ def get_dicts(n_graphs, graph_classes):
     params_dict = {graph_name: params_dict for graph_name in graph_classes}
     return embed_dict, params_dict
 
-def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, gs, p1, p2 ):
+def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, covariance):
     embeddings1, embeddings2 = [], []
+    thetas1, thetas2 = [], []
     for _ in range(n_graph):
         # TODO: Put the parameters simulation here
         gs = GraphSim(graph_name=graph_name1)  # It doesn't matter the graph_name here
+        gs.update_seed()
+        theta = np.abs(gs.get_p_from_bivariate_gaussian(s=covariance))
+        ###
+        #theta = sigmoid(np.abs(theta))  # normalize
+        # Linear normalization
+        theta1, theta2 = theta[0,0], theta[0,1]
+        normalization  = theta1 + theta2
+        theta1, theta2 = theta1 / normalization, theta2 / normalization
+        ###
 
         # Generate parameters and normalize then gen graph
-        graph1  = simulation_graph_case(gs, p1, graph_name1, n_nodes=n_nodes)
-        graph2  = simulation_graph_case(gs, p2, graph_name2, n_nodes=n_nodes)
+        graph1  = simulation_graph_case(gs, theta1, graph_name1, n_nodes=n_nodes)
+        graph2  = simulation_graph_case(gs, theta2, graph_name2, n_nodes=n_nodes)
         ##############
         # Fujita method
         # TODO: Try embedders
@@ -79,7 +92,10 @@ def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, gs, p1, p
 
         embeddings1.append(largest_eigenvalue1)
         embeddings2.append(largest_eigenvalue2)
-    return embeddings1, embeddings2
+        thetas1.append(theta1)
+        thetas2.append(theta2)
+
+    return embeddings1, embeddings2, thetas1, thetas2
 
 def ensure_nested_dicts(embed_dict, params_dict, graph_name1, graph_name2, n_graph):
     if graph_name1 not in embed_dict:
@@ -112,23 +128,13 @@ def run_simulation(n_graphs, n_simulations, n_nodes, covariance, graph_classes):
                 
                 # Mark this combination as simulated
                 simulated_combinations.add((graph_name1, graph_name2, n_graph))
-                gs = GraphSim(graph_name=graph_name1)  # It doesn't matter the graph_name here
+                #gs = GraphSim(graph_name=graph_name1)  # It doesn't matter the graph_name here
 
                 #TODO: Shuoold the vector of params be here
                 for _ in range(n_simulations):
-                    #TODO: Should the vector of params be here
-                    gs.update_seed()
-                    theta = np.abs(gs.get_p_from_bivariate_gaussian(s=covariance))
-                    ###
-                    #theta = sigmoid(np.abs(theta))  # normalize
-                    # Linear normalization
-                    theta1, theta2 = theta[0,0], theta[0,1]
-                    normalization  = theta1 + theta2
-                    theta1, theta2 = theta1 / normalization, theta2 / normalization
-                    ###
-
-                    embeddings1, embeddings2  = simulate_vector_graphs(n_graph, graph_name1, graph_name2,
-                                                                       n_nodes, gs, theta1, theta2)
+                    embeddings1, embeddings2, thetas1, thetas2 = simulate_vector_graphs(n_graph=n_graph, graph_name1=graph_name1,
+                                                                                        graph_name2=graph_name2,
+                                                                                        n_nodes=n_nodes, covariance=covariance)
 
                     embed_dict, params_dict = ensure_nested_dicts(embed_dict=embed_dict, params_dict=params_dict,
                                                                   graph_name1=graph_name1, graph_name2=graph_name2,
@@ -136,19 +142,19 @@ def run_simulation(n_graphs, n_simulations, n_nodes, covariance, graph_classes):
 
                     # Store the results
                     embed_dict[graph_name1][graph_name2][n_graph].append((embeddings1, embeddings2))
-                    params_dict[graph_name1][graph_name2][n_graph].append([theta1, theta2])
+                    params_dict[graph_name1][graph_name2][n_graph].append((thetas1, thetas2))
 
     return embed_dict, params_dict
 
 def plot_roc_curves(graph_types, n_graphs, eigen, params, n_simulations):
     def calculate_rates(p_values, threshold):
-        fp, tn = 0, 0
+        rejected_null, accepted_null = 0, 0
         for p_value in p_values:
             if p_value > threshold:
-                fp += 1
+                rejected_null += 1
             else:
-                tn += 1
-        return tn / (fp + tn) if (fp + tn) > 0 else 0
+                accepted_null += 1
+        return accepted_null / (rejected_null + accepted_null) if (rejected_null + accepted_null) > 0 else 0
 
     fig, axs = plt.subplots(len(graph_types), len(graph_types), figsize=(15, 15))
     for n_graph in n_graphs:
@@ -157,6 +163,11 @@ def plot_roc_curves(graph_types, n_graphs, eigen, params, n_simulations):
                 if j >= i:  # This condition ensures we only fill the upper triangle
                     pval = get_spearman_pvalues(eigen, n_simulations=n_simulations, n_graph=n_graph,
                                                 first_family_name=gt1, second_family_name=gt2)
+                    rhos = get_spearman_rhos(eigen, n_simulations=n_simulations, n_graph=n_graph,
+                                                first_family_name=gt1, second_family_name=gt2)
+                    print(f'for the {gt1} and {gt2} i get {np.mean(rhos)} +- {np.std(rhos)}')
+                    print()
+                    print()
                     thresholds = np.linspace(0, 1, len(pval))
                     fprs = [calculate_rates(pval, th) for th in thresholds]
                     
@@ -168,9 +179,15 @@ def plot_roc_curves(graph_types, n_graphs, eigen, params, n_simulations):
                 else:
                     axs[i, j].axis('off')
 
-    pval_baseline = get_spearm_pvalues_baseline(params, n_graph=n_graphs[-1],
-                                                first_family='erdos_renyi', second_family='erdos_renyi',
-                                                n_simulations=n_simulations)
+    pval_baseline = get_spearman_pvalues(params, n_graph=n_graphs[-1],
+                                        first_family_name='erdos_renyi',
+                                        second_family_name='erdos_renyi',
+                                        n_simulations=n_simulations)
+    rhos_baseline = get_spearman_rhos(eigen, n_simulations=n_simulations, n_graph=n_graph,
+                                    first_family_name=gt1, second_family_name=gt2)
+    print(f'for the baseline i get {np.mean(rhos_baseline)} +- {np.std(rhos_baseline)}')
+    print()
+                    
     fprs_baseline = [calculate_rates(pval_baseline, th) for th in thresholds]
     axs[-1, 0].axis('on')
     axs[-1, 0].plot(thresholds, fprs_baseline, marker='.', label=f'{n_graphs[-1]}')
@@ -193,7 +210,7 @@ if __name__ == "__main__":
             #"barabasi_albert",
             #"watts_strogatz",
         ]
-    args.n_graphs = [20]
+    args.n_graphs = [80]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
