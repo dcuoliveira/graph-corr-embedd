@@ -15,18 +15,19 @@ class GraphSim:
         """
         self.graph_name = graph_name
 
-    def get_p_from_bivariate_gaussian(self, s: float):
+    def get_p_from_bivariate_gaussian(self, s: float, size: int):
         """
         Generate probability of edge creation from a bivariate gaussian distribution.
         
         Args:
             s: covariance between gaussian random variables.
+            size: size of the output matrix.
             
         Returns:
             probability of edge creation.
         """
 
-        p = np.random.multivariate_normal(mean=[0, 0], cov=[[1, s], [s, 1]], size=1)
+        p = np.random.multivariate_normal(mean=[0, 0], cov=[[1, s], [s, 1]], size=size)
 
         return p
 

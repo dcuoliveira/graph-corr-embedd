@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
-from utils.activation_functions import sigmoid
+from utils.activation_functions import min_max_normalization, sigmoid
 from utils.parsers import str_2_bool
 
 parser = argparse.ArgumentParser()
@@ -48,19 +48,19 @@ if __name__ == "__main__":
         graphs_given_cov = []
         for i in range(args.n_simulations):
 
+            # gen seed
+            gs.update_seed()
+            save_seed = gs.seed
+
+            # generate probability of edge creation
+            ps = gs.get_p_from_bivariate_gaussian(s=s, size=args.n_graphs)
+            ps = sigmoid(ps)
+
             for j in range(args.n_graphs):
 
-                # gen seed
-                gs.update_seed()
-                save_seed = gs.seed
-
-                # generate probability of edge creation
-                p = gs.get_p_from_bivariate_gaussian(s=s)
-                p = sigmoid(p.__abs__())
-
                 # simulate graph
-                graph1 = gs.simulate_erdos(n=args.n_nodes, prob=p[0,0])
-                graph2 = gs.simulate_erdos(n=args.n_nodes, prob=p[0,1])
+                graph1 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,0])
+                graph2 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,1])
 
                 # save graph
                 sim_graph_info = {
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                     "graph1": graph1,
                     "graph2": graph2,
                     "seed": save_seed,
-                    "p": p,
+                    "p": ps[j,],
                     "cov": s # cov = corr becaus variances are 1
                     
                 }
