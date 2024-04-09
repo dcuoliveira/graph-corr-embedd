@@ -36,19 +36,19 @@ def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simu
         graphs_given_cov = []
         for i in range(n_simulations):
 
+            # gen seed
+            gs.update_seed()
+            save_seed = gs.seed
+
+            # generate probability of edge creation
+            ps = gs.get_p_from_bivariate_gaussian(s=s, size=n_graphs)
+            ps = sigmoid(ps)
+
             for j in range(n_graphs):
 
-                # gen seed
-                gs.update_seed()
-                save_seed = gs.seed
-
-                # generate probability of edge creation
-                p = gs.get_p_from_bivariate_gaussian(s=s)
-                p = sigmoid(p.__abs__())
-
                 # simulate graph
-                graph1 = gs.simulate_erdos(n=n_nodes, prob=p[0,0])
-                graph2 = gs.simulate_erdos(n=n_nodes, prob=p[0,1])
+                graph1 = gs.simulate_erdos(n=n_nodes, prob=ps[j,0])
+                graph2 = gs.simulate_erdos(n=n_nodes, prob=ps[j,1])
 
                 # save graph
                 sim_graph_info = {
@@ -58,7 +58,7 @@ def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simu
                     "graph1": graph1,
                     "graph2": graph2,
                     "seed": save_seed,
-                    "p": p,
+                    "p": ps[j,],
                     "corr": s # cov = corr becaus variances are 1
                     
                 }
