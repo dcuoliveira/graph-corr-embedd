@@ -1,7 +1,8 @@
-import numpy as np
-import torch
+# import sys
+# import os
+# sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
+
 import torch.nn as nn
-import torch.nn.functional as F
 
 from stats.Stats import Stats
 class StackedSparseAutoencoder(nn.Module, Stats):
@@ -46,16 +47,17 @@ class StackedSparseAutoencoder(nn.Module, Stats):
         z = self.encoder(x)
         recon_x = self.decoder(z)
         return recon_x, z
+    
+DEBUG = False
 
-    def loss_function(self, recon_x, x):
-        # Mean squared error for reconstruction loss
-        recon_loss = F.mse_loss(recon_x, x)
+if __name__ == "__main__":
+    input_size = 100
+    hidden_sizes = [50,25,50]
+    dropout=0.5
+    learning_rate=0.001
+    sparsity_penalty=1e-4
 
-        # L1 loss for sparsity penalty
-        sparsity_loss = 0
-        for layer in self.encoder:
-            if isinstance(layer, nn.Linear):
-                sparsity_loss += torch.sum(torch.abs(layer.weight))
-
-        total_loss = recon_loss + self.sparsity_penalty * sparsity_loss
-        return total_loss
+    model = StackedSparseAutoencoder(input_size=input_size,
+                                     hidden_sizes=hidden_sizes,
+                                     dropout=dropout,
+                                     sparsity_penalty=sparsity_penalty)
