@@ -105,10 +105,10 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute correlation between embeddings (true target)
-            cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            epoch_results.append([cov, data.y])
+            epoch_results.append([pred_cov, data.y])
 
             # compute loss functions I
             ll1 = loss_local.forward(adj=x1, z=z1)
