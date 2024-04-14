@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, default="simulation1")
-parser.add_argument('--sample', type=str, default=True)
+parser.add_argument('--sample', type=str, default=False)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--model_name', type=str, default="sae")
 parser.add_argument('--input_size', type=int, default=100)
