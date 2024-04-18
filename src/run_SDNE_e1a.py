@@ -43,6 +43,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.sample = str_2_bool(args.sample)
+    args.shuffle = str_2_bool(args.shuffle)
 
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
