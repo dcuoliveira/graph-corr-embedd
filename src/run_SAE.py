@@ -9,7 +9,7 @@ from models.SAE import StackedSparseAutoencoder
 from loss_functions.LossReconSparse import LossReconSparse
 from data.Simulation1Loader import Simulation1Loader
 from utils.conn_data import save_pickle
-from utils.parsers import str_2_bool
+from utils.parsers import str_2_bool, str_2_list
 
 parser = argparse.ArgumentParser()
 
@@ -19,7 +19,7 @@ parser.add_argument('--sample', type=str, default=False)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--model_name', type=str, default="sae")
 parser.add_argument('--input_size', type=int, default=100)
-parser.add_argument('--hidden_sizes', type=list, default=[50,25,50])  # Comma-separated list for hidden layers
+parser.add_argument('--hidden_sizes', type=str, default="50,25,50")  # Comma-separated list for hidden layers
 parser.add_argument('--dropout', type=float, default=0.5)
 parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--epochs', type=int, default=10)
@@ -31,6 +31,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.sample = str_2_bool(args.sample)
+    args.shuffle = str_2_bool(args.shuffle)
+    args.hidden_sizes = str_2_list(args.hidden_sizes)
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
