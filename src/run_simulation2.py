@@ -45,8 +45,16 @@ def simulation_graph_case(gs, theta, graph_name, n_nodes):
         graph = gs.simulate_erdos(n=n_nodes, prob=theta)
     elif graph_name == "random_geometric":
         graph = gs.simulate_geometric(n=n_nodes, radius=theta)
+    elif graph_name == "k_regular":
+        if n_nodes * int(10*theta) % 2 != 0:
+            graph = gs.simulate_k_regular(n=n_nodes, k=int(10*theta)+1)
+        else:
+            graph = gs.simulate_k_regular(n=n_nodes, k=int(10*theta))
     elif graph_name == "barabasi_albert":
-        graph = gs.simulate_barabasi_albert(n=n_nodes, m=int(10*theta))
+        if int(10*theta) == 0:
+            graph = gs.simulate_barabasi_albert(n=n_nodes, m=1)
+        else:
+            graph = gs.simulate_barabasi_albert(n=n_nodes, m=int(10*theta))
     elif graph_name == "watts_strogatz":
         graph = gs.simulate_watts_strogatz(n=n_nodes, k=3, p=theta)
     return graph
@@ -162,9 +170,6 @@ def plot_roc_curves(graph_types, n_graphs, eigen, params, n_simulations):
                 else:
                     axs[i, j].axis('off')
 
-    #pval_baseline = get_spearm_pvalues_baseline(params, n_graph=n_graphs[-1],
-                                                #first_family='erdos_renyi', second_family='erdos_renyi',
-                                                ##n_simulations=n_simulations)
     pval_baseline = get_spearman_pvalues(params, n_simulations=n_simulations, n_graph=n_graph,
                                         first_family_name='erdos_renyi', second_family_name='erdos_renyi')
     fprs_baseline = [calculate_rates(pval_baseline, th) for th in thresholds]
@@ -185,11 +190,12 @@ if __name__ == "__main__":
     args.graph_types = [
             "erdos_renyi",
             "random_geometric",
-            #"random_regular",
-            #"barabasi_albert",
+            "k_regular",
+            "barabasi_albert",
             #"watts_strogatz",
         ]
     args.n_graphs = [10, 20]
+    #args.n_graphs = [20, 40, 60, 80, 100]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
