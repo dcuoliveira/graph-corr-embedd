@@ -192,10 +192,10 @@ if __name__ == "__main__":
             "random_geometric",
             "k_regular",
             "barabasi_albert",
-            #"watts_strogatz",
+            "watts_strogatz",
         ]
-    args.n_graphs = [10, 20]
-    #args.n_graphs = [20, 40, 60, 80, 100]
+    #args.n_graphs = [10, 20]
+    args.n_graphs = [20, 40, 60, 80, 100]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
