@@ -1,4 +1,7 @@
 
+def str_2_list(val):
+    return [int(x) for x in val.split(",")]
+
 def str_2_bool(val):
 
     val = str(val)
