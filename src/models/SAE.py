@@ -7,8 +7,8 @@ import torch.nn as nn
 from stats.Stats import Stats
 class StackedSparseAutoencoder(nn.Module, Stats):
     def __init__(self,
-                 input_size: int,
-                 hidden_sizes: list,
+                 input_size: int, # The input size of the adj matrix
+                 hidden_sizes: list, # The hidden sizes of the architecture
                  bias: bool = True,
                  dropout: float = 0.0,
                  sparsity_penalty: float = 1e-4):
