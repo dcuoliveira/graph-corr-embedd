@@ -115,7 +115,6 @@ if __name__ == '__main__':
     test_results = []
     with torch.no_grad():
         for n in pbar:
-
             simulation_results = []
             for cov in sim.covs:
 
@@ -164,5 +163,9 @@ if __name__ == '__main__':
     # save file
     if args.sample:
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+        torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
+        torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        torch.save(model1.state_dict(), f"{output_path}/model1.pth")
+        torch.save(model2.state_dict(), f"{output_path}/model2.pth")

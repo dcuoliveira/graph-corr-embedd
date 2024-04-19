@@ -11,7 +11,10 @@ from simulation.GraphSim import GraphSim
 from utils.conn_data import save_pickle
 from utils.activation_functions import sigmoid
 
+import torch
 from models.Spectrum import Spectrum
+from models.SAE import StackedSparseAutoencoder
+from models.SDNE import SDNE
 
 parser = argparse.ArgumentParser()
 
@@ -21,23 +24,15 @@ parser.add_argument('--simulation_name', type=str, help='Simulation name to be u
 #parser.add_argument('--graph_types', type=np.array, help='Graph name to be generated.', default=["erdos_renyi", "random_geometric", "watts_strogatz"])
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
 #parser.add_argument('--n_graphs', type=np.array, help='Number of graphs per simulation.', default=[10,20])
-parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=25)
+parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--covariance', type=float, help='Covariance.', default=0)
-
-def get_spearm_pvalues_baseline(params, n_graph, first_family, second_family, n_simulations):
-    pvalues = []
-    for _ in range(n_simulations):
-        first_run = np.array(params[first_family][second_family][n_graph])[:,0]
-        second_run = np.array(params[first_family][second_family][n_graph])[:,1]
-        pvalues.append(spearmanr(first_run, second_run).pvalue)
-    return pvalues
 
 def get_spearman_pvalues(eigenvalues_dict, first_family_name, second_family_name, n_simulations, n_graph):
     pvalues = []
     for i in range(n_simulations):
-        first_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][0]
-        second_family = eigenvalues_dict[first_family_name][second_family_name][n_graph][i][1]
-        pvalues.append(spearmanr(first_family, second_family).pvalue)
+        first_vector = np.array(eigenvalues_dict[first_family_name][second_family_name][n_graph][i][0])
+        second_vector = np.array(eigenvalues_dict[first_family_name][second_family_name][n_graph][i][1])
+        pvalues.append(spearmanr(first_vector.flatten(), second_vector.flatten()).pvalue)
     return pvalues
 
 def simulation_graph_case(gs, theta, graph_name, n_nodes):
@@ -66,6 +61,46 @@ def get_dicts(n_graphs, graph_classes):
     params_dict = {graph_name: params_dict for graph_name in graph_classes}
     return embed_dict, params_dict
 
+#TODO: Fix
+def load_model(model_name, graph1, graph2):
+    if model_name == 'SAE':
+        path = 'src/data/outputs/simulation1/sae_[30, 15, 30]_1000/model1_sample.pth'
+        model1 = StackedSparseAutoencoder(input_size=100, hidden_sizes=[30,15,30], dropout=0.5, sparsity_penalty=1e-4)  # initialize the model first
+        model1.load_state_dict(torch.load(path))  # replace with your actual path
+        model1.eval()  # set the model to evaluation mode
+
+        path = 'src/data/outputs/simulation1/sae_[30, 15, 30]_1000/model2_sample.pth'
+        model2 = StackedSparseAutoencoder(input_size=100, hidden_sizes=[30,15,30], dropout=0.5, sparsity_penalty=1e-4)  # initialize the model first
+        model2.load_state_dict(torch.load(path))  # replace with your actual path
+        model2.eval()  # set the model to evaluation mode
+
+
+        input1 = torch.tensor(nx.adjacency_matrix(graph1).A, dtype=torch.float32)
+        input2 = torch.tensor(nx.adjacency_matrix(graph2).A, dtype=torch.float32)
+
+        with torch.no_grad():
+            _, largest_eigenvalue1 = model1.forward(input1)
+            _, largest_eigenvalue2 = model2.forward(input2)
+            largest_eigenvalue1 = largest_eigenvalue1.detach().flatten()
+            largest_eigenvalue2 = largest_eigenvalue2.detach().flatten()
+
+    elif model_name=='eigenvalue':
+        model1 = Spectrum()
+        model2 = Spectrum()
+        input1 = nx.adjacency_matrix(graph1).A
+        input2 = nx.adjacency_matrix(graph2).A
+        largest_eigenvalue1 = model1.forward(input1).flatten()
+        largest_eigenvalue2 = model2.forward(input2).flatten()
+
+    elif model_name=='sdne':
+        pass
+    elif model_name=='siamese':
+        pass
+    else:
+        pass
+
+    return largest_eigenvalue1, largest_eigenvalue1
+
 def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, covariance):
     embeddings1, embeddings2 = [], []
     thetas1, thetas2 = [], []
@@ -81,12 +116,11 @@ def simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, covarianc
         # Generate parameters and normalize then gen graph
         graph1  = simulation_graph_case(gs, p1, graph_name1, n_nodes=n_nodes)
         graph2  = simulation_graph_case(gs, p2, graph_name2, n_nodes=n_nodes)
+
         ##############
-        # Fujita method
-        # TODO: Try embedders
-        largest_eigenvalue1 = Spectrum().forward(nx.adjacency_matrix(graph1).A)
-        largest_eigenvalue2 = Spectrum().forward(nx.adjacency_matrix(graph2).A)
-        ############3##
+        largest_eigenvalue1, largest_eigenvalue2 = load_model('SAE', graph1, graph2)
+        #largest_eigenvalue1, largest_eigenvalue2 = load_model('eigenvalue', graph1, graph2)
+        ##############
 
         embeddings1.append(largest_eigenvalue1)
         embeddings2.append(largest_eigenvalue2)
@@ -127,14 +161,12 @@ def run_simulation(n_graphs, n_simulations, n_nodes, covariance, graph_classes):
                 
                 # Mark this combination as simulated
                 simulated_combinations.add((graph_name1, graph_name2, n_graph))
-                gs = GraphSim(graph_name=graph_name1)  # It doesn't matter the graph_name here
-
                 for _ in range(n_simulations):
-                    embeddings1, embeddings2, thetas1, thetas2 = simulate_vector_graphs(n_graph, graph_name1, graph_name2, n_nodes, covariance=covariance)
+                    embeddings1, embeddings2, thetas1, thetas2 = simulate_vector_graphs(n_graph, graph_name1, graph_name2,
+                                                                                        n_nodes, covariance=covariance)
 
-                    embed_dict, params_dict = ensure_nested_dicts(embed_dict=embed_dict, params_dict=params_dict,
-                                                                  graph_name1=graph_name1, graph_name2=graph_name2,
-                                                                  n_graph=n_graph)
+                    embed_dict, params_dict = ensure_nested_dicts(embed_dict=embed_dict, params_dict=params_dict, graph_name1=graph_name1,
+                                                                  graph_name2=graph_name2, n_graph=n_graph)
 
                     # Store the results
                     embed_dict[graph_name1][graph_name2][n_graph].append((embeddings1, embeddings2))
@@ -190,12 +222,12 @@ if __name__ == "__main__":
     args.graph_types = [
             "erdos_renyi",
             "random_geometric",
-            "k_regular",
-            "barabasi_albert",
-            "watts_strogatz",
+            #"k_regular",
+            #"barabasi_albert",
+            #"watts_strogatz",
         ]
-    #args.n_graphs = [10, 20]
-    args.n_graphs = [20, 40, 60, 80, 100]
+    args.n_graphs = [10, 20]
+    #args.n_graphs = [20, 40, 60, 80, 100]
 
     # Check if path exists
     input_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
