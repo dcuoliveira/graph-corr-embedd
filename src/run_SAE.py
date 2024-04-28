@@ -68,6 +68,10 @@ if __name__ == '__main__':
         epoch_loss1, epoch_loss2  = 0, 0
         epoch_results = []
         for data in train_loader:
+
+            optimizer1.zero_grad()
+            optimizer2.zero_grad()
+
             # get inputs
             x1 = data.x[0, :, :]
             x2 = data.x[1, :, :]
@@ -87,11 +91,9 @@ if __name__ == '__main__':
             loss2 = loss_func.forward(x2_hat, x2, model2)
 
             # backward and optimize
-            optimizer1.zero_grad()
             loss1.backward()
             optimizer1.step()
 
-            optimizer2.zero_grad()
             loss2.backward()
             optimizer2.step()
 
