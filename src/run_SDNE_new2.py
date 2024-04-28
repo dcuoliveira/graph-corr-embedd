@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne-new2")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--loss_name', type=str, help='Additional loss to include in the sdne model.', default=None, choices=[None, "abs_distance", "distance"])
@@ -163,13 +163,13 @@ if __name__ == '__main__':
                 loss_reg_tot2 += lr2
                 loss_add_tot2 += ladd2
 
-            ## backward pass
-            loss_train_tot1.backward()
-            opt1.step()
+                ## backward pass
+                lt1.backward()
+                opt1.step()
 
-            ## backward pass
-            loss_train_tot2.backward()
-            opt2.step()
+                ## backward pass
+                lt2.backward()
+                opt2.step()
 
         epoch_results = torch.tensor(epoch_results)
 
