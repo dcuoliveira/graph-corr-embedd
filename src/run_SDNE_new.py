@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -32,7 +32,6 @@ parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the en
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
-parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
@@ -52,8 +51,7 @@ if __name__ == '__main__':
 
     # define dataset
     sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
-    train_loader = sim.create_graph_loader(batch_size=args.batch_size)
-    test_dataset_list = sim.create_graph_list()
+    dataset_list = sim.create_graph_list()
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -84,7 +82,7 @@ if __name__ == '__main__':
     loss_abs_dis = LossAbsDistance()
 
     # initialize tqdm
-    pbar = tqdm(range(args.epochs))
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
 
     train_results = []
     xs_train, zs_train, z_norms_train = [], [], []
@@ -94,21 +92,35 @@ if __name__ == '__main__':
         loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1, loss_add_tot1 = 0, 0, 0, 0, 0
         loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2, loss_add_tot2 = 0, 0, 0, 0, 0
         epoch_results = []
-        for data in train_loader:
-            # get inputs
-            x1 = data.x[0, :, :]
-            x2 = data.x[1, :, :]
+        for cov in sim.covs:
+            filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
+            filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
+        
+            embeddings1 = []
+            embeddings2 = []
+            x_reconstruction1 = []
+            x_reconstruction2 = []
+            for data in filtered_loader:
+                # get inputs
+                x1 = data.x[0, :, :]
+                x2 = data.x[1, :, :]
 
-            # create global loss parameter matrix
-            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-            b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+                # create global loss parameter matrix
+                b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+                b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
 
-            # forward pass
-            x1_hat, z1, z1_norm = model1.forward(x1)
-            x2_hat, z2, z2_norm = model2.forward(x2)
+                # forward pass
+                x1_hat, z1, z1_norm = model1.forward(x1)
+                x2_hat, z2, z2_norm = model2.forward(x2)
+
+                embeddings1.append(z1.flatten())
+                embeddings2.append(z2.flatten())
+                x_reconstruction1.append(x1_hat)
+                x_reconstruction2.append(x2_hat)
+            embeddings = torch.cat([torch.stack(embeddings[i], axis=1) for i in range(len(embeddings))]).detach()
 
             # compute correlation between embeddings (true target)
-            pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+            pred_cov = model1.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
 
             # store pred and true values
             epoch_results.append([pred_cov, data.y])
@@ -191,7 +203,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in test_dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 
