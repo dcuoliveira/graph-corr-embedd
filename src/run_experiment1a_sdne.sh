@@ -1,12 +1,18 @@
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 10 --n_simulations 10 --n_graphs 10 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 10 --n_simulations 10 --n_graphs 10 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 50 --n_simulations 10 --n_graphs 10 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 50 --n_simulations 10 --n_graphs 10 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 100 --n_simulations 10 --n_graphs 10 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 100 --n_simulations 10 --n_graphs 10 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 200 --n_simulations 10 --n_graphs 10 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 200 --n_simulations 10 --n_graphs 10 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 500 --n_simulations 10 --n_graphs 10 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 500 --n_simulations 10 --n_graphs 10 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 1000 --n_simulations 5 --n_graphs 5 --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1
-python run_SDNE_e1a.py --model_name sdne --sample False --n_nodes 1000 --n_simulations 5 --n_graphs 5 --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20
+python run_SDNE_e1a_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 30 --n_layers_enc 1 --n_layers_dec 1 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 40 --n_layers_enc 1 --n_layers_dec 1 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 50 --n_layers_enc 1 --n_layers_dec 1 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 5 --n_layers_dec 5 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 10 --n_layers_dec 10 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 15 --n_layers_dec 15 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --epochs 10
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 20 --n_layers_enc 1 --n_layers_dec 1 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 30 --n_layers_enc 1 --n_layers_dec 1 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 40 --n_layers_enc 1 --n_layers_dec 1 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 50 --n_layers_enc 1 --n_layers_dec 1 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 1 --n_layers_dec 1 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 5 --n_layers_dec 5 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 10 --n_layers_dec 10 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 15 --n_layers_dec 15 --epochs 100
+python run_SDNE_e1a.py --model_name sdne --sample False --n_hidden 100 --n_layers_enc 20 --n_layers_dec 20 --epochs 100
