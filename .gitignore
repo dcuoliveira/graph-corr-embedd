@@ -1,6 +1,7 @@
 # data tmp
 notebooks/tmp/*
-src/data/inputs/simulation1/*.pkl
+src/data/inputs/simulation1-new/*.pkl
+src/data/inputs/simulation1-old/*.pkl
 src/data/inputs/simulation1a/*.pkl
 
 # vscode
