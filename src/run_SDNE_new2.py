@@ -179,9 +179,9 @@ if __name__ == '__main__':
 
         # save loss
         epochs_loss_train_tot.append([loss_train_tot1.detach(), loss_train_tot2.detach()])
-        epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_train_tot2.detach()])
-        epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_train_tot2.detach()])
-        epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_train_tot2.detach()])
+        epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_global_tot2.detach()])
+        epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_local_tot2.detach()])
+        epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_reg_tot2.detach()])
 
         if loss_add_tot1 != 0 and loss_add_tot2 != 0:
             epochs_loss_add.append([loss_add_tot1.detach(), loss_add_tot2.detach()])
