@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -82,24 +82,24 @@ if __name__ == '__main__':
     loss_abs_dis = LossAbsDistance()
 
     # initialize tqdm
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE-NEW model")
 
     train_results = []
     xs_train, zs_train, z_norms_train = [], [], []
     epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot, epochs_loss_add = [], [], [], [], []
     for epoch in pbar:
 
-        loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1, loss_add_tot1 = 0, 0, 0, 0, 0
-        loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2, loss_add_tot2 = 0, 0, 0, 0, 0
         epoch_results = []
         for cov in sim.covs:
+
+            opt1.zero_grad()
+            opt2.zero_grad()
+
             filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
         
-            embeddings1 = []
-            embeddings2 = []
-            x_reconstruction1 = []
-            x_reconstruction2 = []
+            loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1, loss_add_tot1 = 0, 0, 0, 0, 0
+            loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2, loss_add_tot2 = 0, 0, 0, 0, 0
             for data in filtered_loader:
                 # get inputs
                 x1 = data.x[0, :, :]
@@ -113,68 +113,62 @@ if __name__ == '__main__':
                 x1_hat, z1, z1_norm = model1.forward(x1)
                 x2_hat, z2, z2_norm = model2.forward(x2)
 
-                embeddings1.append(z1.flatten())
-                embeddings2.append(z2.flatten())
-                x_reconstruction1.append(x1_hat)
-                x_reconstruction2.append(x2_hat)
-            embeddings = torch.cat([torch.stack(embeddings[i], axis=1) for i in range(len(embeddings))]).detach()
+                # compute correlation between embeddings (true target)
+                pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
-            # compute correlation between embeddings (true target)
-            pred_cov = model1.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
+                # store pred and true values
+                epoch_results.append([pred_cov, data.y])
 
-            # store pred and true values
-            epoch_results.append([pred_cov, data.y])
+                # compute loss functions I
+                ll1 = loss_local.forward(adj=x1, z=z1)
+                lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
+                lr1 = loss_reg.forward(model=model1)
 
-            # compute loss functions I
-            ll1 = loss_local.forward(adj=x1, z=z1)
-            lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
-            lr1 = loss_reg.forward(model=model1)
+                if args.loss_name == "abs_distance":
+                    ladd1 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
+                elif args.loss_name == "distance":
+                    ladd1 = loss_dis.forward(pred=pred_cov, true=data.y)
+                else:
+                    ladd1 = 0
 
-            if args.loss_name == "abs_distance":
-                ladd1 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-            elif args.loss_name == "distance":
-                ladd1 = loss_dis.forward(pred=pred_cov, true=data.y)
-            else:
-                ladd1 = 0
+                ## compute total loss
+                ## lg ~ ladd >>> lr > ll
+                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (args.gamma * ladd1)
 
-            ## compute total loss
-            ## lg ~ ladd >>> lr > ll
-            lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (args.gamma * ladd1)
+                loss_train_tot1 += lt1
+                loss_global_tot1 += lg1
+                loss_local_tot1 += ll1
+                loss_reg_tot1 += lr1
+                loss_add_tot1 += ladd1
 
-            loss_train_tot1 += lt1
-            loss_global_tot1 += lg1
-            loss_local_tot1 += ll1
-            loss_reg_tot1 += lr1
-            loss_add_tot1 += ladd1
+                # compute loss functions II
+                ll2 = loss_local.forward(adj=x2, z=z2)
+                lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
+                lr2 = loss_reg.forward(model=model2)
+
+                if args.loss_name == "abs_distance":
+                    ladd2 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
+                elif args.loss_name == "distance":
+                    ladd2 = loss_dis.forward(pred=pred_cov, true=data.y)
+                else:
+                    ladd2 = 0
+
+                ## compute total loss
+                ## g ~ ladd >>> lr > ll
+                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (args.gamma * ladd2)
+
+                loss_train_tot2 += lt2
+                loss_global_tot2 += lg2
+                loss_local_tot2 += ll2
+                loss_reg_tot2 += lr2
+                loss_add_tot2 += ladd2
 
             ## backward pass
-            lt1.backward()
+            loss_train_tot1.backward()
             opt1.step()
 
-            # compute loss functions II
-            ll2 = loss_local.forward(adj=x2, z=z2)
-            lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
-            lr2 = loss_reg.forward(model=model2)
-
-            if args.loss_name == "abs_distance":
-                ladd2 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-            elif args.loss_name == "distance":
-                ladd2 = loss_dis.forward(pred=pred_cov, true=data.y)
-            else:
-                ladd2 = 0
-
-            ## compute total loss
-            ## g ~ ladd >>> lr > ll
-            lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (args.gamma * ladd2)
-
-            loss_train_tot2 += lt2
-            loss_global_tot2 += lg2
-            loss_local_tot2 += ll2
-            loss_reg_tot2 += lr2
-            loss_add_tot2 += ladd2
-
             ## backward pass
-            lt2.backward()
+            loss_train_tot2.backward()
             opt2.step()
 
         epoch_results = torch.tensor(epoch_results)
@@ -188,14 +182,18 @@ if __name__ == '__main__':
         epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_train_tot2.detach()])
         epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_train_tot2.detach()])
         epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_train_tot2.detach()])
-        epochs_loss_add.append([loss_add_tot1.detach(), loss_add_tot2.detach()])
+
+        if loss_add_tot1 != 0 and loss_add_tot2 != 0:
+            epochs_loss_add.append([loss_add_tot1.detach(), loss_add_tot2.detach()])
+        else:
+            epochs_loss_add.append([loss_add_tot1, loss_add_tot2])
 
         train_results.append(epoch_results)
 
     # pred list to tensor
     train_results = torch.stack(train_results)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE model on Test Data")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE-NEW model on Test Data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
