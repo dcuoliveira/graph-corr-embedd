@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -82,15 +82,13 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(range(args.epochs))
 
-    train_results = []
-    xs_train, zs_train, z_norms_train = [], [], []
-    epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot, epochs_loss_add = [], [], [], [], []
+    epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
+    epochs_predictions = []
     for epoch in pbar:
 
-        loss_train_tot1, loss_global_tot1, loss_local_tot1, loss_reg_tot1, loss_add_tot1 = 0, 0, 0, 0, 0
-        loss_train_tot2, loss_global_tot2, loss_local_tot2, loss_reg_tot2, loss_add_tot2 = 0, 0, 0, 0, 0
-        epoch_results = []
-
+        batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
+        batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2 = [], [], [], []
+        batch_predictions = []
         for data in train_loader:
 
             opt1.zero_grad()
@@ -112,81 +110,61 @@ if __name__ == '__main__':
             pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            epoch_results.append([pred_cov, data.y])
+            batch_predictions.append([pred_cov, data.y])
 
             # compute loss functions I
             ll1 = loss_local.forward(adj=x1, z=z1)
             lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
             lr1 = loss_reg.forward(model=model1)
 
-            if args.loss_name == "abs_distance":
-                ladd1 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-            elif args.loss_name == "distance":
-                ladd1 = loss_dis.forward(pred=pred_cov, true=data.y)
-            else:
-                ladd1 = 0
-
             ## compute total loss
             ## lg ~ ladd >>> lr > ll
-            lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (args.gamma * ladd1)
+            lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
 
-            loss_train_tot1 += lt1
-            loss_global_tot1 += lg1
-            loss_local_tot1 += ll1
-            loss_reg_tot1 += lr1
-            loss_add_tot1 += ladd1
+            batch_tot_loss1.append(lt1)
+            batch_global_loss1.append(lg1)
+            batch_local_loss1.append(ll1)
+            batch_reg_loss1.append(lr1)
 
             # compute loss functions II
             ll2 = loss_local.forward(adj=x2, z=z2)
             lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
             lr2 = loss_reg.forward(model=model2)
 
-            if args.loss_name == "abs_distance":
-                ladd2 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-            elif args.loss_name == "distance":
-                ladd2 = loss_dis.forward(pred=pred_cov, true=data.y)
-            else:
-                ladd2 = 0
-
             ## compute total loss
             ## g ~ ladd >>> lr > ll
-            lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (args.gamma * ladd2)
+            lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
 
-            loss_train_tot2 += lt2
-            loss_global_tot2 += lg2
-            loss_local_tot2 += ll2
-            loss_reg_tot2 += lr2
-            loss_add_tot2 += ladd2
+            batch_tot_loss2.append(lt2)
+            batch_global_loss2.append(lg2)
+            batch_local_loss2.append(ll2)
+            batch_reg_loss2.append(lr2)
 
-        ## backward pass
-        lt1.backward()
-        opt1.step()
-            
-        ## backward pass
-        lt2.backward()
-        opt2.step()
+            ## backward pass
+            lt1.backward()
+            opt1.step()
+                
+            ## backward pass
+            lt2.backward()
+            opt2.step()
 
-        epoch_results = torch.tensor(epoch_results)
+        epochs_predictions.append(torch.tensor(batch_predictions))
 
+        epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1))
+        epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1))
+        epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1))
+        epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1))
+        
         # update tqdm
         pbar.update(1)
-        pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, loss_train_tot1, loss_train_tot2))
-
-        # save loss
-        epochs_loss_train_tot.append([loss_train_tot1.detach(), loss_train_tot2.detach()])
-        epochs_loss_global_tot.append([loss_global_tot1.detach(), loss_global_tot2.detach()])
-        epochs_loss_local_tot.append([loss_local_tot1.detach(), loss_local_tot2.detach()])
-        epochs_loss_reg_tot.append([loss_reg_tot1.detach(), loss_reg_tot2.detach()])
-
-        if loss_add_tot1 != 0 and loss_add_tot2 != 0:
-            epochs_loss_add.append([loss_add_tot1.detach(), loss_add_tot2.detach()])
-        else:
-            epochs_loss_add.append([loss_add_tot1, loss_add_tot2])
-        
-        train_results.append(epoch_results)
+        pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, batch_tot_loss1[-1].detach().item(), batch_tot_loss2[-1].detach().item()))
 
     # pred list to tensor
-    train_results = torch.stack(train_results)
+    epochs_predictions = torch.stack(epochs_predictions)
+    epochs_tot_loss = torch.stack(epochs_tot_loss)
+    epochs_global_loss = torch.stack(epochs_global_loss)
+    epochs_local_loss = torch.stack(epochs_local_loss)
+    epochs_reg_loss = torch.stack(epochs_reg_loss)
 
     pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE model on Test Data")
     test_results = []
@@ -230,12 +208,12 @@ if __name__ == '__main__':
 
     results = {
         "args": args,
-        "train_results": train_results,
-        "test_results": test_results,
-        "train_total_loss": epochs_loss_train_tot,
-        "train_local_loss": epochs_loss_local_tot,
-        "train_global_loss": epochs_loss_global_tot,
-        "train_reg_loss": epochs_loss_reg_tot,
+        "train_predictions": epochs_predictions,
+        "test_predictions": test_results,
+        "train_loss": epochs_tot_loss,
+        "epochs_global_loss": epochs_global_loss,
+        "epochs_local_loss": epochs_local_loss,
+        "epochs_reg_loss": epochs_reg_loss,
     }
 
     model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
@@ -248,5 +226,9 @@ if __name__ == '__main__':
     # save file
     if args.sample:
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+        torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
+        torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        torch.save(model1.state_dict(), f"{output_path}/model1.pth")
+        torch.save(model2.state_dict(), f"{output_path}/model2.pth")
