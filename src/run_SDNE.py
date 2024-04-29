@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
-from src.data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1aLoader import Simulation1aLoader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
@@ -19,13 +19,12 @@ from utils.parsers import str_2_bool
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
-parser.add_argument('--loss_name', type=str, help='Additional loss to include in the sdne model.', default=None, choices=[None, "abs_distance", "distance"])
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
@@ -47,11 +46,8 @@ if __name__ == '__main__':
     args.sample = str_2_bool(args.sample)
     args.shuffle = str_2_bool(args.shuffle)
 
-    # fix model name
-    args.model_name = f"{args.model_name}_{args.loss_name}"
-
     # define dataset
-    sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
+    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     train_loader = sim.create_graph_loader(batch_size=args.batch_size)
     test_dataset_list = sim.create_graph_list()
 
