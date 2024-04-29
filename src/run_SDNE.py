@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         
         # update tqdm
         pbar.update(1)
-        pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, batch_tot_loss1[-1].detach().item(), batch_tot_loss2[-1].detach().item()))
+        pbar.set_description("SDNE Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, batch_tot_loss1[-1].detach().item(), batch_tot_loss2[-1].detach().item()))
 
     # pred list to tensor
     epochs_predictions = torch.stack(epochs_predictions)
