@@ -14,7 +14,7 @@ import numpy as np
 from utils.conn_data import load_pickle
 from src.run_simulation1b import run_simulation1a
 
-class Simulation1aLoader(object):
+class Simulation1bLoader(object):
     """
     Class to load data from simulation 1. The description of the simulation 1
     is given at Fujita et al. (2017) paper.
