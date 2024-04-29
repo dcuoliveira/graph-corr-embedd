@@ -7,14 +7,14 @@ from torch_geometric.data import DataLoader
 
 from models.SAE import StackedSparseAutoencoder
 from loss_functions.LossReconSparse import LossReconSparse
-from src.data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1aLoader import Simulation1aLoader
 from utils.conn_data import save_pickle
 from utils.parsers import str_2_bool, str_2_list
 
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, default="simulation1")
+parser.add_argument('--dataset_name', type=str, default="simulation1a")
 parser.add_argument('--sample', type=str, default=False)
 parser.add_argument('--batch_size', type=int, default=1)
 parser.add_argument('--model_name', type=str, default="sae")
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     args.hidden_sizes = str_2_list(args.hidden_sizes)
 
     # define dataset
-    sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
+    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     train_loader = sim.create_graph_loader(batch_size=args.batch_size)
     test_dataset_list = sim.create_graph_list()
 
@@ -60,13 +60,12 @@ if __name__ == '__main__':
     # initialize tqdm
     pbar = tqdm(range(args.epochs))
 
-    train_results = []
-    xs_train, zs_train, z_norms_train = [], [], []
+    epochs_predictions = []
     epochs_loss_tot = []
     for epoch in pbar:
 
-        epoch_loss1, epoch_loss2  = 0, 0
-        epoch_results = []
+        batch_loss_tot1, batch_loss_tot2 = [], []
+        batch_predictions = []
         for data in train_loader:
 
             optimizer1.zero_grad()
@@ -84,7 +83,7 @@ if __name__ == '__main__':
             pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
-            epoch_results.append([pred_cov, data.y])
+            batch_predictions.append([pred_cov, data.y])
 
             # compute loss
             loss1 = loss_func.forward(x1_hat, x1, model1)
@@ -97,23 +96,20 @@ if __name__ == '__main__':
             loss2.backward()
             optimizer2.step()
 
-            epoch_loss1 += loss1.item()
-            epoch_loss2 += loss2.item()
+            batch_loss_tot1.append(loss1.item())
+            batch_loss_tot2.append(loss2.item())
 
-        epoch_results = torch.tensor(epoch_results)
+        epochs_predictions.append(torch.tensor(batch_predictions))
+        epochs_loss_tot.append(torch.stack([torch.tensor(batch_loss_tot1), torch.tensor(batch_loss_tot2)], axis=1))
 
         # update tqdm
         pbar.update(1)
-        pbar.set_description("Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, epoch_loss1, epoch_loss2))
+        pbar.set_description("SAE Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, batch_loss_tot1[-1], batch_loss_tot2[-1]))
 
-        # save loss
-        epochs_loss_tot.append([epoch_loss1, epoch_loss2])
-        train_results.append(epoch_results)
+    epochs_predictions = torch.stack(epochs_predictions)
+    epochs_loss_tot = torch.stack(epochs_loss_tot)
 
-    # pred list to tensor
-    train_results = torch.stack(train_results)
-
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SAE model on Test Data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
@@ -143,15 +139,12 @@ if __name__ == '__main__':
             simulation_results = torch.tensor(simulation_results)
             test_results.append(simulation_results)
             
-            pbar.update(1)
-            pbar.set_description(f"Test Simulation: {n}")
-            
-    test_results = torch.stack(test_results)
+    test_predictions = torch.stack(test_results)
 
     results = {
         "args": args,
-        "train_results": train_results,
-        "test_results": test_results,
+        "train_predictions": epochs_predictions,
+        "test_predictions": test_predictions,
         "train_loss": epochs_loss_tot,
     }
 
