@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
 from models.Spectrum import Spectrum
-from src.data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1aLoader import Simulation1aLoader
 
 from utils.conn_data import save_pickle, save_inputs_piecewise
 from utils.parsers import str_2_bool
@@ -15,8 +15,8 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="spectrum")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
-parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1")
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     args.sample = str_2_bool(args.sample)
 
     # define dataset
-    sim = Simulation1Loader(name=args.dataset_name, sample=args.sample)
+    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     dataset_list = sim.create_graph_list()
 
     # define model
