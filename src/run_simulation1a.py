@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
-parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1")
+parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1a")
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
 
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)

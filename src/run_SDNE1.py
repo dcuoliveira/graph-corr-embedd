@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
-from data.Simulation1Loader import Simulation1Loader
+from src.data.Simulation1aLoader import Simulation1aLoader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
@@ -25,7 +25,6 @@ parser.add_argument('--batch_size', type=int, help='Batch size to traint the mod
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne-new2")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
-parser.add_argument('--loss_name', type=str, help='Additional loss to include in the sdne model.', default=None, choices=[None, "abs_distance", "distance"])
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
@@ -86,7 +85,7 @@ if __name__ == '__main__':
 
     train_results = []
     xs_train, zs_train, z_norms_train = [], [], []
-    epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot, epochs_loss_add = [], [], [], [], []
+    epochs_loss_train_tot, epochs_loss_global_tot, epochs_loss_local_tot, epochs_loss_reg_tot = [], [], [], []
     for epoch in pbar:
 
         epoch_results = []
@@ -124,44 +123,28 @@ if __name__ == '__main__':
                 lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
                 lr1 = loss_reg.forward(model=model1)
 
-                if args.loss_name == "abs_distance":
-                    ladd1 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-                elif args.loss_name == "distance":
-                    ladd1 = loss_dis.forward(pred=pred_cov, true=data.y)
-                else:
-                    ladd1 = 0
-
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
-                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (args.gamma * ladd1)
+                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
 
                 loss_train_tot1 += lt1
                 loss_global_tot1 += lg1
                 loss_local_tot1 += ll1
                 loss_reg_tot1 += lr1
-                loss_add_tot1 += ladd1
 
                 # compute loss functions II
                 ll2 = loss_local.forward(adj=x2, z=z2)
                 lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
                 lr2 = loss_reg.forward(model=model2)
 
-                if args.loss_name == "abs_distance":
-                    ladd2 = loss_abs_dis.forward(pred=pred_cov, true=data.y)
-                elif args.loss_name == "distance":
-                    ladd2 = loss_dis.forward(pred=pred_cov, true=data.y)
-                else:
-                    ladd2 = 0
-
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
-                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (args.gamma * ladd2)
+                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
 
                 loss_train_tot2 += lt2
                 loss_global_tot2 += lg2
                 loss_local_tot2 += ll2
                 loss_reg_tot2 += lr2
-                loss_add_tot2 += ladd2
 
                 ## backward pass
                 lt1.backward()

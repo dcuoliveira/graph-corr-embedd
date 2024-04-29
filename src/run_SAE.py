@@ -7,7 +7,7 @@ from torch_geometric.data import DataLoader
 
 from models.SAE import StackedSparseAutoencoder
 from loss_functions.LossReconSparse import LossReconSparse
-from data.Simulation1Loader import Simulation1Loader
+from src.data.Simulation1aLoader import Simulation1aLoader
 from utils.conn_data import save_pickle
 from utils.parsers import str_2_bool, str_2_list
 

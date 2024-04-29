@@ -6,7 +6,7 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
 from models.Spectrum import Spectrum
-from data.Simulation1Loader import Simulation1Loader
+from src.data.Simulation1aLoader import Simulation1aLoader
 
 from utils.conn_data import save_pickle, save_inputs_piecewise
 from utils.parsers import str_2_bool

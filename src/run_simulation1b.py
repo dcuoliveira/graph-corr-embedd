@@ -8,7 +8,7 @@ from utils.activation_functions import sigmoid
 
 source_path = os.path.dirname(__file__)
 
-def run_simulation1a(simulation_name: str, graph_name: str, sample: bool, n_simulations: int, n_graphs: int, n_nodes: int):
+def run_simulation1b(simulation_name: str, graph_name: str, sample: bool, n_simulations: int, n_graphs: int, n_nodes: int):
 
     # Check if path exists
     output_path = f"{source_path}/data/inputs/{simulation_name}"
