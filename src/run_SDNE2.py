@@ -25,6 +25,7 @@ parser.add_argument('--batch_size', type=int, help='Batch size to traint the mod
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne2")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
+parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
 
 parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
 parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
