@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_name', type=str, default="simulation1a")
 parser.add_argument('--sample', type=str, default=False)
 parser.add_argument('--batch_size', type=int, default=1)
-parser.add_argument('--model_name', type=str, default="sae")
+parser.add_argument('--model_name', type=str, default="sae0")
 parser.add_argument('--input_size', type=int, default=100)
 parser.add_argument('--hidden_sizes', type=str, default="50,25,50")  # Comma-separated list for hidden layers
 parser.add_argument('--dropout', type=float, default=0.5)
