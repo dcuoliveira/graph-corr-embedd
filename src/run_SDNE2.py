@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne2")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
