@@ -21,8 +21,8 @@ parser = argparse.ArgumentParser()
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
-parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=2)
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne2")
+parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne4")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -48,8 +48,7 @@ if __name__ == '__main__':
 
     # define dataset
     sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
-    train_loader = sim.create_graph_loader(batch_size=args.batch_size)
-    test_dataset_list = sim.create_graph_list()
+    dataset_list = sim.create_graph_list()
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -80,27 +79,31 @@ if __name__ == '__main__':
     loss_abs_dis = LossAbsDistance()
 
     # initialize tqdm
-    pbar = tqdm(range(args.epochs))
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE2 model")
 
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
     epochs_predictions = []
     for epoch in pbar:
 
-        batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
-        batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2 = [], [], [], []
-        batch_predictions = []
-        for batch in train_loader:
+        epoch_results = []
+        for cov in sim.covs:
 
-            opt1.zero_grad()  
+            opt1.zero_grad()
             opt2.zero_grad()
 
-            lt1_tot, ll1_tot, lg1_tot, lr1_tot = 0, 0, 0, 0
-            lt2_tot, ll2_tot, lg2_tot, lr2_tot = 0, 0, 0, 0
-            for i, j in enumerate(range(0, args.batch_size * 2, 2)):
-            
+            filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
+            filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
+        
+            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
+            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2 = [], [], [], []
+            batch_predictions = []
+
+            lt1_tot, lg1_tot, ll1_tot, lr1_tot = 0, 0, 0, 0
+            lt2_tot, lg2_tot, ll2_tot, lr2_tot = 0, 0, 0, 0
+            for data in filtered_loader:
                 # get inputs
-                x1 = batch.x[j, :, :]
-                x2 = batch.x[j+1, :, :]
+                x1 = data.x[0, :, :]
+                x2 = data.x[1, :, :]
 
                 # create global loss parameter matrix
                 b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
@@ -114,42 +117,40 @@ if __name__ == '__main__':
                 pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
 
                 # store pred and true values
-                batch_predictions.append([pred_cov, batch[i].y])
+                batch_predictions.append([pred_cov, data.y])
 
                 # compute loss functions I
                 ll1 = loss_local.forward(adj=x1, z=z1)
                 lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
                 lr1 = loss_reg.forward(model=model1)
 
-                ll1_tot += ll1
-                lg1_tot += lg1
-                lr1_tot += lr1
-
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
                 lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
 
                 lt1_tot += lt1
+                lg1_tot += lg1
+                ll1_tot += ll1
+                lr1_tot += lr1
 
                 # compute loss functions II
                 ll2 = loss_local.forward(adj=x2, z=z2)
                 lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
                 lr2 = loss_reg.forward(model=model2)
 
-                ll2_tot += ll2
-                lg2_tot += lg2
-                lr2_tot += lr2
-
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
                 lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
 
                 lt2_tot += lt2
+                lg2_tot += lg2
+                ll2_tot += ll2
+                lr2_tot += lr2
 
             ## backward pass
             lt1_tot.backward()
             opt1.step()
-                
+
             ## backward pass
             lt2_tot.backward()
             opt2.step()
@@ -182,7 +183,7 @@ if __name__ == '__main__':
     epochs_local_loss = torch.stack(epochs_local_loss)
     epochs_reg_loss = torch.stack(epochs_reg_loss)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE0 model on test data")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE2 model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
@@ -190,7 +191,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in test_dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 
@@ -216,7 +217,7 @@ if __name__ == '__main__':
             
             simulation_results = torch.tensor(simulation_results)
             test_results.append(simulation_results)
-            
+                        
     test_results = torch.stack(test_results)
 
     results = {
