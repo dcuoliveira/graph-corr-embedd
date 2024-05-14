@@ -141,14 +141,23 @@ if __name__ == '__main__':
             
     test_predictions = torch.stack(test_results)
 
-    results = {
-        "args": args,
-        "train_predictions": epochs_predictions,
-        "test_predictions": test_predictions,
-        "train_loss": epochs_loss_tot,
+    args = {
+        "args": args
     }
 
-    model_name = f'{args.model_name}_{str(args.hidden_sizes)}_{int(args.epochs)}'
+    predictions = {
+        "train_predictions": epochs_predictions,
+        "test_predictions": test_results,
+    }
+
+    training_info = {
+        "train_loss": epochs_tot_loss,
+        "epochs_global_loss": epochs_global_loss,
+        "epochs_local_loss": epochs_local_loss,
+        "epochs_reg_loss": epochs_reg_loss,
+    }
+
+    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
 
     # check if file exists
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"
@@ -157,10 +166,14 @@ if __name__ == '__main__':
 
     # save file
     if args.sample:
-        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/sample_args.pkl", obj=args)
+        save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
+        save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
         torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
-        save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/args.pkl", obj=args)
+        save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
+        save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
         torch.save(model1.state_dict(), f"{output_path}/model1.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2.pth")
