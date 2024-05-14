@@ -48,12 +48,6 @@ if __name__ == "__main__":
                     "epochs_reg_loss": epochs_reg_loss,
                 }
 
-<<<<<<< HEAD
-                save_pickle(path=f"{output_path}/args.pkl", obj=new_args)
-                save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
-                save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
-=======
                 save_pickle(path=f"{output_path}/{file}/rargs.pkl", obj=new_args)
                 save_pickle(path=f"{output_path}/{file}/r/predictions.pkl", obj=predictions)
                 save_pickle(path=f"{output_path}/{file}/r/training_info.pkl", obj=training_info)
->>>>>>> 4177bad4 (add fix)
