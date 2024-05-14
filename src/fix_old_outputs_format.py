@@ -1,5 +1,6 @@
 import argparse
 import os
+from tqdm import tqdm
 
 from utils.conn_data import load_pickle, save_pickle
 
@@ -15,7 +16,8 @@ if __name__ == "__main__":
     # list files that starts with "model_name"
     files = os.listdir(output_path)
     files = [file for file in files if file.startswith(args.model_name)]
-    for file in files:
+    pbar = tqdm(files, desc=f"Fixing outputs format for model = {args.model_name}", total=len(files))
+    for file in pbar:
         result_names = os.listdir(f"{output_path}/{file}")
 
         if "results.pkl" in result_names:
@@ -30,7 +32,7 @@ if __name__ == "__main__":
                 epochs_local_loss = results["epochs_local_loss"]
                 epochs_reg_loss = results["epochs_reg_loss"]
 
-                args = {
+                new_args = {
                     "args": old_args
                 }
 
@@ -46,6 +48,6 @@ if __name__ == "__main__":
                     "epochs_reg_loss": epochs_reg_loss,
                 }
 
-                save_pickle(path=f"{output_path}/args.pkl", obj=args)
+                save_pickle(path=f"{output_path}/args.pkl", obj=new_args)
                 save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
                 save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
