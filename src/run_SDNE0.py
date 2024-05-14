@@ -206,10 +206,16 @@ if __name__ == '__main__':
             
     test_results = torch.stack(test_results)
 
-    results = {
-        "args": args,
+    args = {
+        "args": args
+    }
+
+    predictions = {
         "train_predictions": epochs_predictions,
         "test_predictions": test_results,
+    }
+
+    training_info = {
         "train_loss": epochs_tot_loss,
         "epochs_global_loss": epochs_global_loss,
         "epochs_local_loss": epochs_local_loss,
@@ -225,10 +231,14 @@ if __name__ == '__main__':
 
     # save file
     if args.sample:
-        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/sample_args.pkl", obj=args)
+        save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
+        save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
         torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
-        save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/args.pkl", obj=args)
+        save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
+        save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
         torch.save(model1.state_dict(), f"{output_path}/model1.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2.pth")
