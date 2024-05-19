@@ -79,8 +79,7 @@ if __name__ == '__main__':
     loss_abs_dis = LossAbsDistance()
 
     # initialize tqdm
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE2 model")
-
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
     epochs_predictions = []
     for epoch in pbar:
@@ -174,7 +173,6 @@ if __name__ == '__main__':
         
         # update tqdm
         pbar.update(1)
-        pbar.set_description("SDNE Train Epoch: %d, Train Loss I & II: %.4f & %.4f" % (epoch, batch_tot_loss1[-1], batch_tot_loss2[-1]))
 
     # pred list to tensor
     epochs_predictions = torch.stack(epochs_predictions)
@@ -183,7 +181,7 @@ if __name__ == '__main__':
     epochs_local_loss = torch.stack(epochs_local_loss)
     epochs_reg_loss = torch.stack(epochs_reg_loss)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE2 model on test data")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
