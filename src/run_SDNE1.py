@@ -83,6 +83,8 @@ if __name__ == '__main__':
     pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
     epochs_predictions = []
+    # SDNE TRAINING: consists of computing gradients for each batch, which contains batch_size numbers of random samples
+    # SDNE TRAINING: accumulates gradients on the epoch level
     for epoch in pbar:
 
         opt1.zero_grad()  
