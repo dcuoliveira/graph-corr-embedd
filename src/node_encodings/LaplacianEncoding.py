@@ -7,7 +7,7 @@ class LaplacianEncoding:
     def __init__(self):
         pass
 
-    def compute_laplacian_encoding(self, adj_matrix: torch.Tensor, l: int):
+    def forward(self, adj_matrix: torch.Tensor, l: int=3):
         """
         Compute Laplacian (positional) encoding for nodes in a graph given its adjacency matrix.
 
@@ -35,6 +35,6 @@ class LaplacianEncoding:
         eigvals, eigvecs = eigh(laplacian)
         
         # Select the first l eigenvectors (corresponding to the smallest eigenvalues)
-        encoding = eigvecs[:, :self.l]
+        encoding = eigvecs[:, :l]
         
         return torch.tensor(encoding, dtype=torch.float)

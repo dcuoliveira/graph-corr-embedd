@@ -4,7 +4,7 @@ class DegreeEncoding:
     def __init__(self):
         pass
 
-    def compute_degree_encoding(self, adj_matrix: torch.Tensor):
+    def forward(self, adj_matrix: torch.Tensor):
         """
         Compute degree encoding for nodes in a graph given its adjacency matrix.
 

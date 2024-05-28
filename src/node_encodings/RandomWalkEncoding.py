@@ -4,7 +4,7 @@ class RandomWalkEncoding:
     def __init__(self):
         pass
 
-    def compute_random_walk_encoding(self, adj_matrix: torch.Tensor, l: int):
+    def forward(self, adj_matrix: torch.Tensor, l: int=3):
         """
         Compute random-walk encoding for nodes in a graph given its adjacency matrix.
 
@@ -29,11 +29,11 @@ class RandomWalkEncoding:
         
         # Initialize the encoding matrix
         n = adj_matrix.size(0)
-        encoding = torch.zeros((n, self.l))
+        encoding = torch.zeros((n, l))
         
         # Compute the powers of R and fill the encoding matrix
         R_power = torch.eye(n)  # R^0 is the identity matrix
-        for i in range(self.l):
+        for i in range(l):
             R_power = torch.matmul(R_power, random_walk_operator)  # R^i
             encoding[:, i] = R_power.diag()
         

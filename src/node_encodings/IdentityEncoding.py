@@ -4,7 +4,7 @@ class IdentityEncoding:
     def __init__(self):
         pass
 
-    def compute_identity_encoding(self, adj_matrix: torch.Tensor):
+    def forward(self, adj_matrix: torch.Tensor):
         """
         Compute identity encoding (one-hot encoding) for nodes in a graph.
 
