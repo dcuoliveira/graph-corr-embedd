@@ -15,9 +15,9 @@ dependencies:
   - tensorflow-probability
   - pyg-lib
   - pygod
-  - pytorch
-  - torchvision 
-  - torchaudio 
+  - pytorch=2.2.2
+  - torchvision=0.17.2 
+  - torchaudio=2.2.2
   - pyg 
   - pytorch-sparse 
   - jupyterlab
@@ -29,6 +29,8 @@ dependencies:
   - dropbox
   - networkx
   - seaborn
+  - dglteam
+  - dgl
   - pip:
     - torch-geometric
     - torch-geometric-temporal
