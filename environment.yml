@@ -5,18 +5,15 @@ channels:
   - pytorch
   - pyg
 dependencies:
-  - python=3.10.0
+  - python=3.9.0
   - mkl<2022
   - pandas
   - numpy
   - tqdm
-  - tensorflow
-  - tensorflow-probability
-  - pyg-lib
   - pygod
-  - pytorch=2.0  # Ensure this is a valid version
-  - torchvision=0.15.2  # Ensure this matches the PyTorch version
-  - torchaudio=2.0  # Ensure this matches the PyTorch version
+  - pytorch=2.0
+  - torchvision=0.15.2
+  - torchaudio=2.0
   - pyg
   - pytorch-sparse
   - jupyterlab
