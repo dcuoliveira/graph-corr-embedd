@@ -11,7 +11,7 @@ from models.SGNN import SGNN
 from data.Simulation1aLoader import Simulation1aLoader
 
 from utils.conn_data import save_pickle
-from utils.parsers import str_2_bool
+from utils.parsers import str_2_bool, tensor_to_dgl_graph_with_features
 
 parser = argparse.ArgumentParser()
 
@@ -23,9 +23,10 @@ parser.add_argument('--model_name', type=str, help='Model name.', default="sdne2
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
 
-parser.add_argument('--encoding_type', type=str, help='Type of encoding to use.', default='degree')
+parser.add_argument('--encoding_type', type=str, help='Type of encoding to use.', default='laplacian')
 parser.add_argument('--n_nodes', type=int, help='Number of nodes in the graph.', default=10)
 parser.add_argument('--n_hidden_encoder', type=int, help='Number of hidden units in the model.', default=15)
+parser.add_argument('--n_layers_encoder', type=int, help='Number of layers in the model.', default=3)
 parser.add_argument('--similarity', type=str, help='Similarity metric to use.', default='cosine')
 parser.add_argument('--pooling', type=str, help='Pooling layer to use.', default='average')
 parser.add_argument('--top_k', type=int, help='Top k nodes to select.', default=15)
@@ -50,11 +51,11 @@ if __name__ == '__main__':
 
     # define model
     node_encodings_parser = NodeEncodingsParser()
-    node_encodings_model = parser.get_encoding(args.endoding_type)
+    node_encodings_model = node_encodings_parser.get_encoding(args.encoding_type)
     embeddings_model = GCN(input_dim=args.n_nodes,
                            type='gcn',
                            n_hidden=args.n_hidden_encoder,
-                           n_layers=args.n_layers,
+                           n_layers=args.n_layers_encoder,
                            dropout=args.dropout)
     forecast_model = SGNN(embedding=embeddings_model,
                           similarity=args.similarity,
@@ -94,12 +95,12 @@ if __name__ == '__main__':
                 x1_enc = node_encodings_model.forward(x1)
                 x2_enc = node_encodings_model.forward(x2)
 
-                # computer node embeddings
-                x1_enc_embeddings = embeddings_model1.forward(x1_enc)
-                x2_enc_embeddings = embeddings_model2.forward(x2_enc)
+                # build dgl graph
+                g1 = tensor_to_dgl_graph_with_features(adj=x1, node_features=x1_enc)
+                g2 = tensor_to_dgl_graph_with_features(adj=x2, node_features=x2_enc)
 
                 # forward pass
-                pred_cov, z1, z2 = forecast_model.forward(x1_enc_embeddings, x2_enc_embeddings)
+                pred_cov, z1, z2 = forecast_model.forward(x1_enc, x2_enc)
 
                 # store pred and true values
                 batch_predictions.append([pred_cov, batch[i].y])
