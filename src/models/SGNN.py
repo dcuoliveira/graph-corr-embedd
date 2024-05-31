@@ -15,7 +15,7 @@ class SGNN(nn.Module, Stats):
                  pooling: str, 
                  top_k=15, 
                  n_linear=2, 
-                 nhidden=16,
+                 n_hidden=16,
                  dropout=0.1,
                  features=None):
         """
@@ -47,7 +47,7 @@ class SGNN(nn.Module, Stats):
             self.pooling_layer = dgl.topk_nodes
             self.top_k = top_k
             self.n_linear = n_linear
-            self.mlp = MLP(n_linear, top_k, nhidden, 1, dropout=dropout)
+            self.mlp = MLP(n_linear, top_k, n_hidden, 1, dropout=dropout)
             # self.linear = nn.Linear(top_k, 1)
 
     def forward(self, graph1: dgl.DGLGraph, graph2: dgl.DGLGraph):
