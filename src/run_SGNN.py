@@ -4,6 +4,7 @@ import argparse
 import os
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
+import torch.nn as nn
 
 from node_encodings.NodeEncodingsParser import NodeEncodingsParser
 from models.GCN import GCN
@@ -19,15 +20,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=2)
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne2")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sgnn")
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
 
 parser.add_argument('--encoding_type', type=str, help='Type of encoding to use.', default='laplacian')
-parser.add_argument('--n_nodes', type=int, help='Number of nodes in the graph.', default=10)
+parser.add_argument('--n_features', type=int, help='Number of nodes in the graph.', default=3)
 parser.add_argument('--n_hidden_encoder', type=int, help='Number of hidden units in the model.', default=15)
 parser.add_argument('--n_layers_encoder', type=int, help='Number of layers in the model.', default=3)
-parser.add_argument('--similarity', type=str, help='Similarity metric to use.', default='cosine')
+parser.add_argument('--similarity', type=str, help='Similarity metric to use.', default='cosine', choices=['cosine']) # euclidean image is [0, \infty) cosine is [-1, 1]
 parser.add_argument('--pooling', type=str, help='Pooling layer to use.', default='average')
 parser.add_argument('--top_k', type=int, help='Top k nodes to select.', default=15)
 parser.add_argument('--n_hidden_decoder', type=int, help='Number of hidden units in the model.', default=15)
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     # define model
     node_encodings_parser = NodeEncodingsParser()
     node_encodings_model = node_encodings_parser.get_encoding(args.encoding_type)
-    embeddings_model = GCN(input_dim=args.n_nodes,
+    embeddings_model = GCN(input_dim=args.n_features,
                            type='gcn',
                            n_hidden=args.n_hidden_encoder,
                            n_layers=args.n_layers_encoder,
@@ -69,10 +70,10 @@ if __name__ == '__main__':
     opt = optim.Adam(forecast_model.parameters(), lr=args.learning_rate)
 
     # define loss functions
-    
+    loss_func = nn.MSELoss()
 
     # initialize tqdm
-    pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running Training for {args.model_name} model")
     epochs_loss = []
     epochs_predictions = []
     for epoch in pbar:
@@ -100,13 +101,13 @@ if __name__ == '__main__':
                 g2 = tensor_to_dgl_graph_with_features(adj=x2, node_features=x2_enc)
 
                 # forward pass
-                pred_cov, z1, z2 = forecast_model.forward(x1_enc, x2_enc)
+                pred_cov, z1, z2 = forecast_model.forward(g1, g2)
 
                 # store pred and true values
-                batch_predictions.append([pred_cov, batch[i].y])
+                batch_predictions.append([pred_cov, batch.y[i]])
 
                 # compute loss functions
-                loss = 0
+                loss = loss_func(pred_cov, batch.y[i])
 
                 # add to initialized loss variables += loss functions
                 loss_tot += loss
@@ -126,7 +127,7 @@ if __name__ == '__main__':
     epochs_predictions = torch.stack(epochs_predictions)
     epochs_loss = torch.stack(epochs_loss)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE0 model on test data")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations),desc=f"Running Testing for {args.model_name} model")
     test_results = []
     with torch.no_grad():
         for n in pbar:
@@ -143,8 +144,16 @@ if __name__ == '__main__':
                     x1 = data.x[0, :, :]
                     x2 = data.x[1, :, :]
 
+                    # compute node encodings
+                    x1_enc = node_encodings_model.forward(x1)
+                    x2_enc = node_encodings_model.forward(x2)
+
+                    # build dgl graph
+                    g1 = tensor_to_dgl_graph_with_features(adj=x1, node_features=x1_enc)
+                    g2 = tensor_to_dgl_graph_with_features(adj=x2, node_features=x2_enc)
+
                     # forward pass
-                    pred_cov, z1, z2 = forecast_model.forward(x1, x2)
+                    pred_cov, z1, z2 = forecast_model.forward(g1, g2)
 
                     # save results
                     simulation_results.append([pred_cov, cov])
@@ -167,7 +176,7 @@ if __name__ == '__main__':
         "train_loss": epochs_loss,
     }
 
-    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+    model_name = f'{args.model_name}_{args.similarity}_{args.pooling}_{args.encoding_type}_{int(args.n_hidden_encoder)}_{int(args.n_layers_encoder)}_{int(args.n_hidden_decoder)}_{int(args.n_linear_decoder)}'
 
     # check if file exists
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"
@@ -179,9 +188,9 @@ if __name__ == '__main__':
         save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
-        torch.save(model.state_dict(), f"{output_path}/model_sample.pth")
+        torch.save(forecast_model.state_dict(), f"{output_path}/model_sample.pth")
     else:
         save_pickle(path=f"{output_path}/args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
-        torch.save(model.state_dict(), f"{output_path}/model.pth")
+        torch.save(forecast_model.state_dict(), f"{output_path}/model.pth")
