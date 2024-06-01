@@ -29,7 +29,7 @@ parser.add_argument('--n_features', type=int, help='Number of nodes in the graph
 parser.add_argument('--n_hidden_encoder', type=int, help='Number of hidden units in the model.', default=15)
 parser.add_argument('--n_layers_encoder', type=int, help='Number of layers in the model.', default=3)
 parser.add_argument('--similarity', type=str, help='Similarity metric to use.', default='cosine', choices=['cosine']) # euclidean image is [0, \infty) cosine is [-1, 1]
-parser.add_argument('--pooling', type=str, help='Pooling layer to use.', default='average')
+parser.add_argument('--pooling', type=str, help='Pooling layer to use.', default='average', choices=['average', 'max'])
 parser.add_argument('--top_k', type=int, help='Top k nodes to select.', default=15)
 parser.add_argument('--n_hidden_decoder', type=int, help='Number of hidden units in the model.', default=15)
 parser.add_argument('--n_linear_decoder', type=int, help='Number of linear layers in the model.', default=2)
