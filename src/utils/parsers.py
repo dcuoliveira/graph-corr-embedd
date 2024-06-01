@@ -6,7 +6,7 @@ def tensor_to_dgl_graph_with_features(adj, node_features):
     # Create a DGLGraph
     g = dgl.graph((src, dst))
     # Assign node features
-    g.ndata['feat'] = node_features
+    g.ndata['node_attr'] = node_features
     return g
 
 
