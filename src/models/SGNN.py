@@ -30,14 +30,20 @@ class SGNN(nn.Module, Stats):
         self.embedding = embedding
         self.input_dim = embedding.input_dim
         self.features = features
+
         if similarity.lower() == 'cosine':
+            # takes into consideration the ORIENTATION between the two embeddings
             self.similarity = nn.CosineSimilarity()
             if pooling == 'topk':
                 self.descending = False
-        else:
+        elif similarity.lower() == 'euclidean':
+            # takes into consideration the MAGNITUTE and ORIENTATION between the two embeddings 
             self.similarity = nn.PairwiseDistance()
             if pooling == 'topk':
                 self.descending = True
+        else:
+            raise ValueError(f'Similarity metric not implemented: {similarity}')
+        
         self.pooling = pooling
         if pooling == 'average' or pooling == 'avgraph':
             self.pooling_layer = dgl.nn.pytorch.glob.AvgPooling()
@@ -64,7 +70,8 @@ class SGNN(nn.Module, Stats):
 
         with graph1.local_scope():
 
-            if self.pooling == 'avgraph':  # compute a graph embedding before computing distance/similarity between embeddings
+             # compute a graph embedding before computing distance/similarity between embeddings
+            if self.pooling == 'avgraph':
                 graph1_encoding = self.pooling_layer(graph1, graph1_encoding)
                 graph2_encoding = self.pooling_layer(graph2, graph2_encoding)
 
@@ -74,12 +81,11 @@ class SGNN(nn.Module, Stats):
             # then use a pooling layer to output the final similarity score/distance
             if self.pooling == 'average' or self.pooling == 'max':  # global average or max pooling
                 x = self.pooling_layer(graph1, similarity).squeeze()
-
             elif self.pooling == 'topk':  # top k pooling
                 graph1.ndata['similarity'] = similarity
                 x, _ = self.pooling_layer(graph1, 'similarity', k=self.top_k, descending=self.descending)
                 x = x.squeeze()
-                if self.nlinear == 0:  # apply average pooling
+                if self.nlin_linearnear == 0:  # apply average pooling
                     x = torch.nn.AvgPool1d(x)
                 else:  # apply MLP
                     if x.dim() < 2:
@@ -88,4 +94,4 @@ class SGNN(nn.Module, Stats):
             else:
                 x = similarity.squeeze()
 
-        return x
+        return x, graph1_encoding, graph2_encoding
