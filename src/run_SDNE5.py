@@ -181,7 +181,7 @@ if __name__ == '__main__':
     epochs_local_loss = torch.stack(epochs_local_loss)
     epochs_reg_loss = torch.stack(epochs_reg_loss)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running SDNE0 model on test data")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
