@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--source_path', type=str, help='Source path for saving output.', default=os.path.dirname(__file__))
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
-parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1a")
+parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1c")
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
 
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     args.sample = str_2_bool(args.sample)
 
     # Check if path exists
-    output_path = f"{args.source_path}/data/inputs/{args.simulation_name}"
+    output_path = f"{args.source_path}/data/inputs/{args.simulation_name}/{args.graph_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
@@ -59,12 +59,27 @@ if __name__ == "__main__":
             for j in range(args.n_graphs):
 
                 # simulate graph
-                graph1 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,0])
-                graph2 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,1])
+                if args.graph_name == 'erdos_renyi':
+                    graph1 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,0])
+                    graph2 = gs.simulate_erdos(n=args.n_nodes, prob=ps[j,1])
+                elif args.graph_name == 'k_regular':
+                    graph1 = gs.simulate_erdos(n=args.n_nodes, k=int(10*ps[j,0]))
+                    graph2 = gs.simulate_erdos(n=args.n_nodes, k=int(10*ps[j,1]))
+                elif args.graph_name == 'geometric':
+                    graph1 = gs.simulate_erdos(n=args.n_nodes, radius=ps[j,0])
+                    graph2 = gs.simulate_erdos(n=args.n_nodes, radius=ps[j,1])
+                elif args.graph_name == 'barabasi_albert':
+                    graph1 = gs.simulate_erdos(n=args.n_nodes, m=int(10*ps[j,0]))
+                    graph2 = gs.simulate_erdos(n=args.n_nodes, m=int(10*ps[j,1]))
+                elif args.graph_name == 'watts_strogatz':
+                    graph1 = gs.simulate_erdos(n=args.n_nodes, k=3, prob=ps[j,0])
+                    graph2 = gs.simulate_erdos(n=args.n_nodes, k=3, prob=ps[j,1])
+                else:
+                    raise Exception("Graph not present")
 
                 # save graph
                 sim_graph_info = {
-                    
+                    'graph_name': args.graph_name,
                     "n_simulations": i,
                     "n_graphs": j,
                     "graph1": graph1,
@@ -72,7 +87,6 @@ if __name__ == "__main__":
                     "seed": save_seed,
                     "p": ps[j,],
                     "cov": s # cov = corr becaus variances are 1
-                    
                 }
 
                 graphs_given_cov.append(sim_graph_info)
