@@ -71,7 +71,7 @@ if __name__ == '__main__':
         opt2.zero_grad()
 
         epoch_results = []
-        for data in sim.covs:
+        for cov in sim.covs:
             filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
         
@@ -87,13 +87,9 @@ if __name__ == '__main__':
                 x1 = data.x[0, :, :]
                 x2 = data.x[1, :, :]
 
-                # create global loss parameter matrix
-                b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-                b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
-
                 # forward pass
-                x1_hat, z1, z1_norm = model1.forward(x1)
-                x2_hat, z2, z2_norm = model2.forward(x2)
+                x1_hat, z1 = model1.forward(x1)
+                x2_hat, z2 = model2.forward(x2)
 
                 # compute correlation between embeddings (true target)
                 pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
@@ -147,13 +143,9 @@ if __name__ == '__main__':
                     x1 = data.x[0, :, :]
                     x2 = data.x[1, :, :]
 
-                    # create global loss parameter matrix
-                    b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-                    b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
-
                     # forward pass
-                    x1_hat, z1, z1_norm = model1.forward(x1)
-                    x2_hat, z2, z2_norm = model2.forward(x2)
+                    x1_hat, z1 = model1.forward(x1)
+                    x2_hat, z2 = model2.forward(x2)
                     embeddings.append(torch.stack((z1.flatten().detach(), z2.flatten().detach()), dim=1))
 
                 embeddings = torch.concat(embeddings)
@@ -178,7 +170,12 @@ if __name__ == '__main__':
         "train_loss": epochs_tot_loss,
     }
 
-    model_name = f'{args.model_name}_{int(args.hidden_sizes)}_{float(args.sparsity_penalty)}_{float(args.dropout)}_{int(args.epochs)}'
+    sparsity_penalty_scaled = int(float(args.sparsity_penalty) * 10000)
+    dropout_scaled = int(float(args.dropout) * 10)
+    hidden_sizes_str = '_'.join(map(str, args.hidden_sizes))
+    # Generate the model name
+    model_name = f'{args.model_name}_{hidden_sizes_str}_{sparsity_penalty_scaled}_{dropout_scaled}_{int(args.epochs)}'
+
 
     # check if file exists
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"
