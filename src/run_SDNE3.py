@@ -7,6 +7,7 @@ from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
@@ -20,6 +21,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
+parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne3")
@@ -47,7 +49,12 @@ if __name__ == '__main__':
     args.shuffle = str_2_bool(args.shuffle)
 
     # define dataset
-    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+    if args.dataset_name == "simulation1a":
+        sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+    elif args.dataset_name == "simulation1c":
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+    else:
+        raise Exception('Dataset not found!')
     dataset_list = sim.create_graph_list()
 
     # define model
