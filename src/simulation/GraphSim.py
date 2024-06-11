@@ -41,7 +41,7 @@ class GraphSim:
         Returns:
             None
         """
-        self.seed = np.random.randint(0, 100000) if seed is not None else seed
+        self.seed = seed if seed is not None else np.random.randint(0, 100000)
 
     def simulate_erdos(self, n: int, prob: float):
         """
