@@ -14,6 +14,7 @@ parser.add_argument('--source_path', type=str, help='Source path for saving outp
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--simulation_name', type=str, help='Simulation name to be used on inputs dir.', default="simulation1a")
 parser.add_argument('--graph_name', type=str, help='Graph name to be generated.', default="erdos_renyi")
+parser.add_argument("--seed", type=int, help="Seed for random number generator.", default=10)
 
 parser.add_argument('--n_simulations', type=int, help='Number of simulations.', default=30)
 parser.add_argument('--n_graphs', type=int, help='Number of graphs per simulation.', default=50)
@@ -49,7 +50,7 @@ if __name__ == "__main__":
         for i in range(args.n_simulations):
 
             # gen seed
-            gs.update_seed()
+            gs.update_seed(seed=args.seed)
             save_seed = gs.seed
 
             # generate probability of edge creation
