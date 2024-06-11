@@ -28,7 +28,9 @@ class LaplacianEncoding:
         degree_matrix = np.diag(adj_matrix_np.sum(axis=1))
 
         # Compute the normalized Laplacian matrix
-        d_root_inv = np.diag(1.0 / np.sqrt(adj_matrix_np.sum(axis=1)))
+        d_root_inv = 1.0 / np.sqrt(degree_matrix)
+        d_root_inv[np.isinf(d_root_inv)] = 0
+        
         laplacian = np.eye(adj_matrix_np.shape[0]) - d_root_inv @ adj_matrix_np @ d_root_inv
 
         # Compute the eigenvalues and eigenvectors of the Laplacian matrix
