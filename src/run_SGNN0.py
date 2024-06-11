@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=2)
-parser.add_argument('--model_name', type=str, help='Model name.', default="sgnn")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sgnn0")
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
 

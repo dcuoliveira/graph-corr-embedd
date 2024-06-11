@@ -1,4 +1,0 @@
-python run_SGNN.py --model_name sgnn --dataset_name simulation1a --sample False --batch_size 1 --shuffle True --epochs 10 --encoding_type laplacian --similarity cosine --pooling average
-python run_SGNN.py --model_name sgnn --dataset_name simulation1a --sample False --batch_size 1 --shuffle True --epochs 10 --encoding_type laplacian --similarity cosine --pooling max
-python run_SGNN.py --model_name sgnn --dataset_name simulation1a --sample False --batch_size 1 --shuffle True --epochs 10 --encoding_type laplacian --similarity cosine --pooling topk
-python run_SGNN.py --model_name sgnn --dataset_name simulation1a --sample False --batch_size 1 --shuffle True --epochs 10 --encoding_type laplacian --similarity cosine --pooling bottomk
