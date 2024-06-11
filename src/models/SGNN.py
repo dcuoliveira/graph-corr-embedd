@@ -36,11 +36,15 @@ class SGNN(nn.Module, Stats):
             self.similarity = nn.CosineSimilarity()
             if pooling == 'topk':
                 self.descending = False
+            elif pooling == 'bottomk':
+                self.descending = True
         elif similarity.lower() == 'euclidean':
             # takes into consideration the MAGNITUTE and ORIENTATION between the two embeddings 
             self.similarity = nn.PairwiseDistance()
             if pooling == 'topk':
                 self.descending = True
+            elif pooling == 'bottomk':
+                self.descending = False
         else:
             raise ValueError(f'Similarity metric not implemented: {similarity}')
         
@@ -49,12 +53,13 @@ class SGNN(nn.Module, Stats):
             self.pooling_layer = dgl.nn.pytorch.glob.AvgPooling()
         elif pooling == 'max':
             self.pooling_layer = dgl.nn.pytorch.glob.MaxPooling()
-        else:
+        elif pooling == 'topk' or pooling == 'bottomk':
             self.pooling_layer = dgl.topk_nodes
             self.top_k = top_k
             self.n_linear = n_linear
             self.mlp = MLP(n_linear, top_k, n_hidden, 1, dropout=dropout)
-            # self.linear = nn.Linear(top_k, 1)
+        else:
+            raise ValueError(f'Pooling layer not implemented: {pooling}')
 
     def forward(self, graph1: dgl.DGLGraph, graph2: dgl.DGLGraph):
 
@@ -81,7 +86,7 @@ class SGNN(nn.Module, Stats):
             # then use a pooling layer to output the final similarity score/distance
             if self.pooling == 'average' or self.pooling == 'max':  # global average or max pooling
                 x = self.pooling_layer(graph1, similarity).squeeze()
-            elif self.pooling == 'topk':  # top k pooling
+            elif (self.pooling == 'topk') or (self.pooling == 'bottomk'):  # top k pooling
                 graph1.ndata['similarity'] = similarity
                 x, _ = self.pooling_layer(graph1, 'similarity', k=self.top_k, descending=self.descending)
                 x = x.squeeze()
