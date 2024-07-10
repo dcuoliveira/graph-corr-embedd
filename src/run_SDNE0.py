@@ -221,7 +221,7 @@ if __name__ == '__main__':
         "epochs_reg_loss": epochs_reg_loss,
     }
 
-    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
 
     # check if file exists
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"

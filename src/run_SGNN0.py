@@ -179,7 +179,7 @@ if __name__ == '__main__':
     model_name = f'{args.model_name}_{args.similarity}_{args.pooling}_{args.encoding_type}_{int(args.n_hidden_encoder)}_{int(args.n_layers_encoder)}_{int(args.n_hidden_decoder)}_{int(args.n_linear_decoder)}'
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
