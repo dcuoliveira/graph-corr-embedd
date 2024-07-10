@@ -3,7 +3,7 @@
 
 # Define variables
 GRAPH_NAME="erdos_renyi"
-SAMPLE="True"
+SAMPLE="False"
 
 #############
 ## Erdos Renyi
