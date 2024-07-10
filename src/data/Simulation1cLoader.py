@@ -9,7 +9,11 @@ from torch_geometric.data import Data, DataLoader
 from torch_geometric.utils import from_networkx
 import networkx as nx
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
+from tqdm import tqdm
+
 
 from utils.conn_data import load_pickle, load_pickle_fast
 
@@ -39,14 +43,13 @@ class Simulation1cLoader(object):
             #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
             self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
 
-    def create_graph_list(self):
+    def create_graph_list_old(self):
         graph_data_list = []
 
         for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
             cov_val = float(cov_tag)
 
-            for n_sim, graph_pair_info in enumerate(graph_list):
-
+            for n_sim, graph_pair_info in tqdm(enumerate(graph_list), total=len(graph_list), desc=f"Processing Graphs for Cov {cov_tag}"):
                 graph1 = graph_pair_info['graph1']
                 graph2 = graph_pair_info['graph2']
 
@@ -61,7 +64,7 @@ class Simulation1cLoader(object):
                 # Concatenate the edge indices for both graphs
                 edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
 
-                # concatenate x1 and x2 creating a new dimension
+                # Concatenate x1 and x2 creating a new dimension
                 x = torch.stack([x1, x2], dim=0)
 
                 if cov_val != np.round(graph_pair_info["cov"], 1):
