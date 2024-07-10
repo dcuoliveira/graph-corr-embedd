@@ -43,7 +43,7 @@ class Simulation1cLoader(object):
             #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
             self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
 
-    def create_graph_list_old(self):
+    def create_graph_list(self):
         graph_data_list = []
 
         for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
