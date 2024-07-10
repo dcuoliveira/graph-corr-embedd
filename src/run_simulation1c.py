@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # start simulation procedure
     all_graphs = {}
-    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name}"):
+    for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name} | {args.graph_name}"):
 
         graphs_given_cov = []
         for i in range(args.n_simulations):
