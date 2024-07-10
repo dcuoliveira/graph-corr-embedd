@@ -3,6 +3,7 @@ notebooks/tmp/*
 src/data/inputs/simulation1-new/*.pkl
 src/data/inputs/simulation1-old/*.pkl
 src/data/inputs/simulation1a/*.pkl
+src/data/inputs/simulation1c/*.pkl
 
 # vscode
 .DS_Store
