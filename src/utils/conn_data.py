@@ -1,6 +1,8 @@
 import pickle
 import joblib
 import os
+import _pickle as cpickle
+import gc
 
 def save_pickle(path: str,
                 obj: dict):
@@ -18,6 +20,19 @@ def load_pickle(path: str):
     else:
         with open(path, 'rb') as handle:
             target_dict = pickle.load(handle)
+
+    return target_dict
+
+def load_pickle_fast(path: str):
+    gc.disable()
+    try:
+        if path.endswith(".joblib"):
+            target_dict = joblib.load(path)
+        else:
+            with open(path, 'rb') as handle:
+                target_dict = cpickle.load(handle)
+    finally:
+        gc.enable()
 
     return target_dict
 

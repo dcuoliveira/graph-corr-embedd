@@ -11,7 +11,7 @@ import networkx as nx
 import concurrent.futures
 import numpy as np
 
-from utils.conn_data import load_pickle
+from utils.conn_data import load_pickle, load_pickle_fast
 
 class Simulation1cLoader(object):
     """
@@ -33,9 +33,11 @@ class Simulation1cLoader(object):
 
     def _read_data(self, sample: bool=False):
         if sample:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
+            #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
+            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
         else:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
+            #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
+            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
 
     def create_graph_list(self):
         graph_data_list = []
