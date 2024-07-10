@@ -86,7 +86,8 @@ if __name__ == '__main__':
     loss_abs_dis = LossAbsDistance()
 
     # initialize tqdm
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    # pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
     epochs_predictions = []
     # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
@@ -99,7 +100,8 @@ if __name__ == '__main__':
         epoch_results = []
         for cov in sim.covs:
 
-            filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
+            # filtered_data_list = [data for data in dataset_list if (data.n_simulations == epoch) and (data.y.item() == cov)]
+            filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
         
             batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
