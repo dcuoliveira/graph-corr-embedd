@@ -51,11 +51,12 @@ if __name__ == '__main__':
     # define dataset
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+        dataset_list = sim.create_graph_list() # Too slow
     elif args.dataset_name == "simulation1c":
-        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name, preprocessed=True)
+        dataset_list = sim.graph_data
     else:
         raise Exception('Dataset not found!')
-    dataset_list = sim.create_graph_list()
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
