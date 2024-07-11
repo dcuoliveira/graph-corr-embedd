@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
+parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=2)
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne1")
@@ -243,8 +244,8 @@ if __name__ == '__main__':
 
     model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
 
-    # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
+    # check if file exists 
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
