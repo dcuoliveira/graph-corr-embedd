@@ -70,8 +70,8 @@ if __name__ == "__main__":
                     graph1 = gs.simulate_geometric(n=args.n_nodes, radius=ps[j,0])
                     graph2 = gs.simulate_geometric(n=args.n_nodes, radius=ps[j,1])
                 elif args.graph_name == 'barabasi_albert':
-                    graph1 = gs.simulate_barabasi_albert(n=args.n_nodes, m=int(10*ps[j,0]))
-                    graph2 = gs.simulate_barabasi_albert(n=args.n_nodes, m=int(10*ps[j,1]))
+                    graph1 = gs.simulate_barabasi_albert(n=args.n_nodes, m=int(1+10*ps[j,0]))
+                    graph2 = gs.simulate_barabasi_albert(n=args.n_nodes, m=int(1+10*ps[j,1]))
                 elif args.graph_name == 'watts_strogatz':
                     graph1 = gs.simulate_watts_strogatz(n=args.n_nodes, k=3, p=ps[j,0])
                     graph2 = gs.simulate_watts_strogatz(n=args.n_nodes, k=3, p=ps[j,1])
