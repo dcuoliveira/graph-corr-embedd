@@ -28,20 +28,30 @@ class Simulation1cLoader(object):
 
     """
     
-    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False ):
+    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False, preprocessed: bool=False):
         super().__init__()
     
         self.graph_name = graph_name
+        self.preprocessed = preprocessed
         self.name = name
-        self._read_data(sample=sample)
+        self._read_data(sample=sample, preprocessed=preprocessed)
 
-    def _read_data(self, sample: bool=False):
+    def _read_data(self, sample: bool=False, preprocessed: bool=False):
         if sample:
-            #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
-            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
+            if preprocessed:
+                self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info_processed.pkl"))
+                self.n_simulations = np.unique([data.n_simulations for data in self.graph_data])
+                self.covs = np.unique([data.y.item() for data in self.graph_data])
+            else:
+                self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
         else:
-            #self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
-            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
+            if preprocessed:
+                print(f'Loding pre processed graph data!')
+                self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info_processed.pkl"))
+                self.n_simulations = np.unique([data.n_simulations for data in self.graph_data])
+                self.covs = np.unique([data.y.item() for data in self.graph_data])
+            else:
+                self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
 
     def create_graph_list(self):
         graph_data_list = []
