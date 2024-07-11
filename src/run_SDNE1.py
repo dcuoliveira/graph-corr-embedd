@@ -7,6 +7,7 @@ from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
@@ -47,9 +48,14 @@ if __name__ == '__main__':
     args.shuffle = str_2_bool(args.shuffle)
 
     # define dataset
-    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+    if args.dataset_name == "simulation1a":
+        sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+    elif args.dataset_name == "simulation1c":
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+    else:
+        raise Exception('Dataset not found!')
     train_loader = sim.create_graph_loader(batch_size=args.batch_size)
-    test_dataset_list = sim.create_graph_list()
+    dataset_list = sim.create_graph_list()
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -190,7 +196,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in test_dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 
