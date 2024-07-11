@@ -1,7 +1,7 @@
 
 # Define variables
 # ['erdos_renyi', 'k_regular', 'geometric', 'barabasi_albert', 'watts_strogatz']
-GRAPH_NAME="erdos_renyi"
+GRAPH_NAME="watts_strogatz"
 SAMPLE="False"
 
 
