@@ -8,16 +8,14 @@ from torch_geometric.data import DataLoader
 from models.SAE import StackedSparseAutoencoder
 from loss_functions.LossReconSparse import LossReconSparse
 from data.Simulation1aLoader import Simulation1aLoader
+from data.Simulation1cLoader import Simulation1cLoader
 from utils.conn_data import save_pickle
 from utils.parsers import str_2_bool, str_2_list
 
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, default="simulation1a")
-parser.add_argument('--sample', type=str, default=False)
 parser.add_argument('--batch_size', type=int, default=1)
-parser.add_argument('--model_name', type=str, default="sae0")
 parser.add_argument('--input_size', type=int, default=100)
 parser.add_argument('--hidden_sizes', type=str, default="50,25,50")  # Comma-separated list for hidden layers
 parser.add_argument('--dropout', type=float, default=0.5)
@@ -25,6 +23,11 @@ parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--sparsity_penalty', type=float, default=1e-4)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
+
+parser.add_argument('--dataset_name', type=str, default="simulation1a")
+parser.add_argument('--sample', type=str, default=False)
+parser.add_argument('--model_name', type=str, default="sae1")
+parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 
 if __name__ == '__main__':
 
@@ -34,11 +37,18 @@ if __name__ == '__main__':
     # convert to boolean
     args.sample = str_2_bool(args.sample)
     args.shuffle = str_2_bool(args.shuffle)
+    # Convert to array
     args.hidden_sizes = str_2_list(args.hidden_sizes)
 
     # define dataset
-    sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
-    dataset_list = sim.create_graph_list()
+    if args.dataset_name == "simulation1a":
+        sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+        dataset_list = sim.create_graph_list() # Too slow
+    elif args.dataset_name == "simulation1c":
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name, preprocessed=True)
+        dataset_list = sim.graph_data
+    else:
+        raise Exception('Dataset not found!')
 
     # define model
     model1 = StackedSparseAutoencoder(input_size=args.input_size,
@@ -177,9 +187,8 @@ if __name__ == '__main__':
     # Generate the model name
     model_name = f'{args.model_name}_{hidden_sizes_str}_{sparsity_penalty_scaled}_{dropout_scaled}_{int(args.epochs)}'
 
-
-    # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{model_name}"
+    # check if file exists 
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
@@ -196,4 +205,3 @@ if __name__ == '__main__':
         save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
         torch.save(model1.state_dict(), f"{output_path}/model1.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2.pth")
-
