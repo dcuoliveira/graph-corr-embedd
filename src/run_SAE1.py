@@ -185,7 +185,7 @@ if __name__ == '__main__':
     dropout_scaled = int(float(args.dropout) * 10)
     hidden_sizes_str = '_'.join(map(str, args.hidden_sizes))
     # Generate the model name
-    model_name = f'{args.model_name}_{hidden_sizes_str}_{sparsity_penalty_scaled}_{dropout_scaled}_{int(args.epochs)}'
+    model_name = f'{args.model_name}_hidden_sizes_{hidden_sizes_str}_sparsity_{sparsity_penalty_scaled}_dropout_{dropout_scaled}_epochs_{int(args.epochs)}'
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
