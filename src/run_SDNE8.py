@@ -11,8 +11,6 @@ from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
 from loss_functions.LossLocal import LossLocal
 from loss_functions.LossReg import LossReg
-from loss_functions.LossAbsDistance import LossAbsDistance
-from loss_functions.LossDistance import LossDistance
 from loss_functions.LossEigen import LossEigen
 
 from utils.conn_data import save_pickle
@@ -83,8 +81,6 @@ if __name__ == '__main__':
     loss_local = LossLocal()
     loss_global = LossGlobal()
     loss_reg = LossReg()
-    loss_dis = LossDistance()
-    loss_abs_dis = LossAbsDistance()
     loss_eigen = LossEigen()
 
     # initialize tqdm
