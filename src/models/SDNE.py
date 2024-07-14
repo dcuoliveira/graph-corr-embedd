@@ -31,6 +31,13 @@ class SDNE(nn.Module, Stats):
                 encoder_layers.append(nn.Linear(node_size // 2, node_size // 2, bias=bias_enc))
         self.encoder = nn.Sequential(*encoder_layers)
 
+        # add glorot and bengio (2010) initialization
+        for layer in self.encoder:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_normal_(layer.weight)
+                if bias_enc:
+                    nn.init.constant_(layer.bias, 0.0)
+
         # decoder
         decoder_layers = []
         for i in range(n_layers_dec + 1):
@@ -43,6 +50,13 @@ class SDNE(nn.Module, Stats):
             else:
                 decoder_layers.append(nn.Linear(n_hidden, node_size))
         self.decoder = nn.Sequential(*decoder_layers)
+
+        # add glorot and bengio (2010) initialization
+        for layer in self.decoder:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_normal_(layer.weight)
+                if bias_dec:
+                    nn.init.constant_(layer.bias, 0.0)
 
         # sparsity
         self.droput = droput
