@@ -64,7 +64,7 @@ if __name__ == '__main__':
     val_size = int(0.1 * n)
     test_size = n - train_size - val_size
     
-    train_idx = np.random.random_integers(0, n, size=train_size)
+    train_idx = np.random.random_integers(0, n-1, size=train_size)
     train_set = set(train_idx)
     all_indices = set(range(n))
     available_indices = all_indices - train_set
