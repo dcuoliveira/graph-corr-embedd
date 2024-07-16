@@ -38,6 +38,10 @@ parser.add_argument('--learning_rate', type=float, help='Learning rate of the op
 
 if __name__ == '__main__':
 
+    # Check if CUDA is available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+
     # parse args
     args = parser.parse_args()
 
@@ -57,14 +61,14 @@ if __name__ == '__main__':
                            type='gcn',
                            n_hidden=args.n_hidden_encoder,
                            n_layers=args.n_layers_encoder,
-                           dropout=args.dropout)
+                           dropout=args.dropout).to(device)
     forecast_model = SGNN(embedding=embeddings_model,
                           similarity=args.similarity,
                           pooling=args.pooling,
                           top_k=args.top_k, 
                           n_linear=args.n_linear_decoder, 
                           n_hidden=args.n_hidden_decoder,
-                          dropout=args.dropout)
+                          dropout=args.dropout).to(device)
     
     # define optimizer
     opt = optim.Adam(forecast_model.parameters(), lr=args.learning_rate)
@@ -89,8 +93,8 @@ if __name__ == '__main__':
                 opt.zero_grad()  
 
                 # get inputs
-                x1 = batch.x[j, :, :]
-                x2 = batch.x[j+1, :, :]
+                x1 = batch.x[j, :, :].to(device)
+                x2 = batch.x[j+1, :, :].to(device)
 
                 # compute node encodings
                 x1_enc = node_encodings_model.forward(x1)
@@ -104,10 +108,10 @@ if __name__ == '__main__':
                 pred_cov, z1, z2 = forecast_model.forward(g1, g2)
 
                 # store pred and true values
-                batch_predictions.append([pred_cov, batch.y[i]])
+                batch_predictions.append([pred_cov, batch.y[i].to(device)])
 
                 # compute loss functions
-                loss = loss_func(pred_cov, batch.y[i])
+                loss = loss_func(pred_cov, batch.y[i].to(device))
 
                 # add to initialized loss variables += loss functions
                 loss_tot += loss
@@ -119,9 +123,9 @@ if __name__ == '__main__':
             ## store loss values
             batch_loss.append(loss_tot.detach().item())
 
-        epochs_predictions.append(torch.tensor(batch_predictions))
+        epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
-        epochs_loss.append(torch.stack([torch.tensor(batch_loss), torch.tensor(batch_loss)], axis=1))
+        epochs_loss.append(torch.stack([torch.tensor(batch_loss), torch.tensor(batch_loss)], axis=1).to(device))
 
     # pred list to tensor
     epochs_predictions = torch.stack(epochs_predictions)
@@ -140,9 +144,12 @@ if __name__ == '__main__':
 
                 embeddings = [] 
                 for data in filtered_loader:
+                    # Move data to the appropriate device
+                    data = data.to(device)
+
                     # get inputs
-                    x1 = data.x[0, :, :]
-                    x2 = data.x[1, :, :]
+                    x1 = data.x[0, :, :].to(device)
+                    x2 = data.x[1, :, :].to(device)
 
                     # compute node encodings
                     x1_enc = node_encodings_model.forward(x1)
@@ -158,7 +165,7 @@ if __name__ == '__main__':
                     # save results
                     simulation_results.append([pred_cov, cov])
             
-            simulation_results = torch.tensor(simulation_results)
+            simulation_results = torch.tensor(simulation_results).to(device)
             test_results.append(simulation_results)
             
     test_results = torch.stack(test_results)
