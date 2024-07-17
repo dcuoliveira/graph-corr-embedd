@@ -8,6 +8,7 @@ import random
 import numpy as np
 
 from models.SDNE import SDNE
+from model_utils.EarlyStopper import EarlyStopper
 from data.Simulation1aLoader import Simulation1aLoader
 from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
@@ -97,6 +98,9 @@ if __name__ == '__main__':
                   bias_dec=True,
                   droput=args.dropout).to(device)
     
+    # define early stopper
+    early_stopper = EarlyStopper(patience=10, min_delta=100)
+    
     # define optimizer
     opt1 = optim.Adam(model1.parameters(), lr=args.learning_rate)
     opt2 = optim.Adam(model2.parameters(), lr=args.learning_rate)
@@ -182,9 +186,14 @@ if __name__ == '__main__':
             lt2.backward()
             opt2.step()
 
+            ## gradient clipping
+            torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
+
         val_predictions = []
         val_tot_loss1, val_global_loss1, val_local_loss1, val_reg_loss1 = [], [], [], []
         val_tot_loss2, val_global_loss2, val_local_loss2, val_reg_loss2 = [], [], [], []
+        lt1_val_tot, lt2_val_tot = 0, 0
         with torch.no_grad():
             for data in val_list:
 
@@ -217,6 +226,7 @@ if __name__ == '__main__':
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
                 lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
+                lt1_val_tot += lt1
 
                 val_tot_loss1.append(lt1)
                 val_global_loss1.append(lg1)
@@ -231,11 +241,15 @@ if __name__ == '__main__':
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
                 lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
+                lt2_val_tot += lt2
 
                 val_tot_loss2.append(lt2)
                 val_global_loss2.append(lg2)
                 val_local_loss2.append(ll2)
                 val_reg_loss2.append(lr2)
+
+        if early_stopper.early_stop(lt1_val_tot) and early_stopper.early_stop(lt2_val_tot):             
+            break
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))        
         epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1).to(device))

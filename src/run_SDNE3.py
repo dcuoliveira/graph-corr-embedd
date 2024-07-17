@@ -6,6 +6,7 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 
 from models.SDNE import SDNE
+from model_utils.EarlyStopper import EarlyStopper
 from data.Simulation1aLoader import Simulation1aLoader
 from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
@@ -22,7 +23,7 @@ parser = argparse.ArgumentParser()
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne3")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -77,6 +78,9 @@ if __name__ == '__main__':
                   bias_enc=True,
                   bias_dec=True,
                   droput=args.dropout).to(device)
+    
+    # define early stopper
+    early_stopper = EarlyStopper(patience=10, min_delta=100)
     
     # define optimizer
     opt1 = optim.Adam(model1.parameters(), lr=args.learning_rate)
@@ -167,6 +171,13 @@ if __name__ == '__main__':
             ## backward pass
             lt2_tot.backward()
             opt2.step()
+
+            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+                break
+
+            ## gradient clipping
+            torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
 
             batch_tot_loss1.append(lt1_tot.detach().item())
             batch_global_loss1.append(lg1_tot.detach().item())
