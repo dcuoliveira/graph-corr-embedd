@@ -120,6 +120,9 @@ if __name__ == '__main__':
             loss_tot.backward()
             opt.step()
 
+            ## gradient clipping
+            torch.nn.utils.clip_grad_norm_(forecast_model.parameters(), max_norm=1.0)
+
             ## store loss values
             batch_loss.append(loss_tot.detach().item())
 
