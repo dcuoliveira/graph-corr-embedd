@@ -8,6 +8,7 @@ import random
 import numpy as np
 
 from models.SDNE import SDNE
+from model_utils.EarlyStopper import EarlyStopper
 from data.Simulation1aLoader import Simulation1aLoader
 from data.Simulation1cLoader import Simulation1cLoader
 from loss_functions.LossGlobal import LossGlobal
@@ -42,6 +43,10 @@ parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparamet
 
 if __name__ == '__main__':
 
+    # Check if CUDA is available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+
     # parse args
     args = parser.parse_args()
 
@@ -64,7 +69,7 @@ if __name__ == '__main__':
     val_size = int(0.1 * n)
     test_size = n - train_size - val_size
     
-    train_idx = np.random.random_integers(0, n-1, size=train_size)
+    train_idx = np.random.randint(0, n, size=train_size)
     train_set = set(train_idx)
     all_indices = set(range(n))
     available_indices = all_indices - train_set
@@ -84,7 +89,7 @@ if __name__ == '__main__':
                   n_layers_dec=args.n_layers_dec,
                   bias_enc=True,
                   bias_dec=True,
-                  droput=args.dropout)
+                  droput=args.dropout).to(device)
     
     model2 = SDNE(node_size=args.n_nodes,
                   n_hidden=args.n_hidden,
@@ -92,7 +97,10 @@ if __name__ == '__main__':
                   n_layers_dec=args.n_layers_dec,
                   bias_enc=True,
                   bias_dec=True,
-                  droput=args.dropout)
+                  droput=args.dropout).to(device)
+    
+    # define early stopper
+    early_stopper = EarlyStopper(patience=10, min_delta=100)
     
     # define optimizer
     opt1 = optim.Adam(model1.parameters(), lr=args.learning_rate)
@@ -105,12 +113,12 @@ if __name__ == '__main__':
     loss_eigen = LossEigen()
 
     # initialize tqdm
-    # pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
-    pbar = tqdm(range(args.epochs+1), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs + 1), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
     val_tot_loss, val_global_loss, val_local_loss, val_reg_loss = [], [], [], []
     epochs_predictions = []
     all_val_predictions = []
+
     # SDNE TRAINING: consists of computing gradients for each individual pairs of graphs
     # SDNE TRAINING: no accumulation of gradients
     for epoch in pbar:
@@ -123,9 +131,12 @@ if __name__ == '__main__':
             opt1.zero_grad()
             opt2.zero_grad()
             
+            # Move data to the appropriate device
+            data = data.to(device)
+
             # get inputs
-            x1 = data.x[0, :, :]
-            x2 = data.x[1, :, :]
+            x1 = data.x[0, :, :].to(device)
+            x2 = data.x[1, :, :].to(device)
 
             # create global loss parameter matrix
             b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
@@ -179,15 +190,23 @@ if __name__ == '__main__':
             lt2.backward()
             opt2.step()
 
+            ## gradient clipping
+            torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
+
         val_predictions = []
         val_tot_loss1, val_global_loss1, val_local_loss1, val_reg_loss1 = [], [], [], []
         val_tot_loss2, val_global_loss2, val_local_loss2, val_reg_loss2 = [], [], [], []
+        lt1_val_tot, lt2_val_tot = 0, 0
         with torch.no_grad():
             for data in val_list:
 
+                # Move data to the appropriate device
+                data = data.to(device)
+
                 # get inputs
-                x1 = data.x[0, :, :]
-                x2 = data.x[1, :, :]
+                x1 = data.x[0, :, :].to(device)
+                x2 = data.x[1, :, :].to(device)
 
                 # create global loss parameter matrix
                 b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
@@ -211,6 +230,7 @@ if __name__ == '__main__':
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
                 lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1)
+                lt1_val_tot += lt1
 
                 val_tot_loss1.append(lt1)
                 val_global_loss1.append(lg1)
@@ -225,23 +245,28 @@ if __name__ == '__main__':
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
                 lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2)
+                lt2_val_tot += lt2
 
                 val_tot_loss2.append(lt2)
                 val_global_loss2.append(lg2)
                 val_local_loss2.append(ll2)
                 val_reg_loss2.append(lr2)
 
-        epochs_predictions.append(torch.tensor(batch_predictions))        
-        epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1))
-        epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1))
-        epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1))
-        epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1))
+        # early stopping
+        if early_stopper.early_stop(lt1_val_tot) and early_stopper.early_stop(lt2_val_tot):             
+            break
 
-        all_val_predictions.append(torch.tensor(val_predictions))
-        val_tot_loss.append(torch.stack([torch.tensor(val_tot_loss1), torch.tensor(val_tot_loss2)], axis=1))
-        val_global_loss.append(torch.stack([torch.tensor(val_global_loss1), torch.tensor(val_global_loss2)], axis=1))
-        val_local_loss.append(torch.stack([torch.tensor(val_local_loss1), torch.tensor(val_local_loss2)], axis=1))
-        val_reg_loss.append(torch.stack([torch.tensor(val_reg_loss1), torch.tensor(val_reg_loss2)], axis=1))
+        epochs_predictions.append(torch.tensor(batch_predictions).to(device))        
+        epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1).to(device))
+        epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1).to(device))
+        epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
+        epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
+
+        all_val_predictions.append(torch.tensor(val_predictions).to(device))
+        val_tot_loss.append(torch.stack([torch.tensor(val_tot_loss1), torch.tensor(val_tot_loss2)], axis=1).to(device))
+        val_global_loss.append(torch.stack([torch.tensor(val_global_loss1), torch.tensor(val_global_loss2)], axis=1).to(device))
+        val_local_loss.append(torch.stack([torch.tensor(val_local_loss1), torch.tensor(val_local_loss2)], axis=1).to(device))
+        val_reg_loss.append(torch.stack([torch.tensor(val_reg_loss1), torch.tensor(val_reg_loss2)], axis=1).to(device))
 
         # update tqdm
         pbar.update(1)
@@ -271,9 +296,12 @@ if __name__ == '__main__':
 
                 embeddings = [] 
                 for data in filtered_loader:
+                    # Move data to the appropriate device
+                    data = data.to(device)
+
                     # get inputs
-                    x1 = data.x[0, :, :]
-                    x2 = data.x[1, :, :]
+                    x1 = data.x[0, :, :].to(device)
+                    x2 = data.x[1, :, :].to(device)
 
                     # create global loss parameter matrix
                     b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
@@ -290,7 +318,7 @@ if __name__ == '__main__':
 
                 simulation_results.append([pred_cov, cov])
             
-            simulation_results = torch.tensor(simulation_results)
+            simulation_results = torch.tensor(simulation_results).to(device)
             test_results.append(simulation_results)
                         
     test_results = torch.stack(test_results)

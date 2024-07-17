@@ -4,7 +4,7 @@ import dgl
 from dgl.nn.pytorch.conv import GraphConv, GINConv, GATConv
 
 from models.MLP import MLP
-from models.ApplyNodeFunc import ApplyNodeFunc
+from src.model_utils.ApplyNodeFunc import ApplyNodeFunc
 
 class GCN(nn.Module):
 
