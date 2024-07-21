@@ -260,6 +260,9 @@ if __name__ == '__main__':
 
     training_info = {
         "train_loss": epochs_tot_loss,
+    }
+
+    epochs_loss = {
         "epochs_global_loss": epochs_global_loss,
         "epochs_local_loss": epochs_local_loss,
         "epochs_reg_loss": epochs_reg_loss,
@@ -277,11 +280,13 @@ if __name__ == '__main__':
         save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
+        save_pickle(path=f"{output_path}/sample_epochs_loss.pkl", obj=epochs_loss)
         torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
         save_pickle(path=f"{output_path}/args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
+        save_pickle(path=f"{output_path}/epochs_loss.pkl", obj=epochs_loss)
         torch.save(model1.state_dict(), f"{output_path}/model1.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2.pth")
