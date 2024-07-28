@@ -147,7 +147,7 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute correlation between embeddings (true target)
-            pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+                pred_cov = model1.compute_spearman_rank_correlation_tensor(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
             batch_predictions.append([pred_cov, data.y])
@@ -217,7 +217,7 @@ if __name__ == '__main__':
                 x2_hat, z2, z2_norm = model2.forward(x2)
 
                 # compute correlation between embeddings (true target)
-                pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+                pred_cov = model1.compute_spearman_rank_correlation_tensor(x=z1.flatten().detach(), y=z2.flatten().detach())
 
                 # store pred and true values
                 val_predictions.append([pred_cov, data.y])
