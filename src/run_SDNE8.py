@@ -20,11 +20,11 @@ from utils.parsers import str_2_bool
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne3")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -34,10 +34,12 @@ parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the en
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
-parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
-parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
-parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
+parser.add_argument('--theta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
+parser.add_argument('--alpha', type=float, default=1, help='weight hyperparameter of the global loss.')
+parser.add_argument('--beta', default=1, type=float, help='weight hyperparameter of the local loss.')
+parser.add_argument('--gamma', type=float, default=1, help='weight hyperparameter of the regularization loss.')
+parser.add_argument('--nu', type=float, default=1, help='weight hyperparameter of the eigen loss.')
+parser.add_argument('--decay', type=float, default=0.9, help='Decay rate for moving averages.')
 
 if __name__ == '__main__':
 
@@ -93,11 +95,13 @@ if __name__ == '__main__':
 
     # initialize tqdm
     pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
-    epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
+    epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
     # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
     # SDNE TRAINING: accumulates gradients on the epoch level
+    lg1_mavg, ll1_mavg, lr1_mavg, le1_mavg = 1, 1, 1, 1
+    lg2_mavg, ll2_mavg, lr2_mavg, le2_mavg = 1, 1, 1, 1
     for epoch in pbar:
 
         opt1.zero_grad()
@@ -109,12 +113,12 @@ if __name__ == '__main__':
             filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
         
-            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
-            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2 = [], [], [], []
+            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
+            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
             batch_predictions = []
 
-            lt1_tot, lg1_tot, ll1_tot, lr1_tot = 0, 0, 0, 0
-            lt2_tot, lg2_tot, ll2_tot, lr2_tot = 0, 0, 0, 0
+            lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
+            lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
             for data in filtered_loader:
                 # Move data to the appropriate device
                 data = data.to(device)
@@ -143,14 +147,27 @@ if __name__ == '__main__':
                 lr1 = loss_reg.forward(model=model1)
                 le1 = loss_eigen.forward(adj=x1, x=x1_hat)
 
+                # Update moving averages
+                lg1_mavg = args.decay * lg1_mavg + (1 - args.decay) * lg1.item()
+                ll1_mavg = args.decay * ll1_mavg + (1 - args.decay) * ll1.item()
+                lr1_mavg = args.decay * lr1_mavg + (1 - args.decay) * lr1.item()
+                le1_mavg = args.decay * le1_mavg + (1 - args.decay) * le1.item()
+
+                # Standardize losses
+                standard_lg1 = lg1 / lg1_mavg
+                standard_ll1 = ll1 / ll1_mavg
+                standard_lr1 = lr1 / lr1_mavg
+                standard_le1 = le1 / le1_mavg
+
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
-                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (100 * le1)
+                lt1 = (args.alpha * standard_lg1) + (args.beta * standard_ll1) + (args.gamma * standard_lr1) + (args.nu * standard_le1)
 
                 lt1_tot += lt1
-                lg1_tot += lg1
-                ll1_tot += ll1
-                lr1_tot += lr1
+                lg1_tot += standard_lg1
+                ll1_tot += standard_ll1
+                lr1_tot += standard_lr1
+                le1_tot += standard_le1
 
                 # compute loss functions II
                 ll2 = loss_local.forward(adj=x2, z=z2)
@@ -158,14 +175,27 @@ if __name__ == '__main__':
                 lr2 = loss_reg.forward(model=model2)
                 le2 = loss_eigen.forward(adj=x2, x=x2_hat)
 
+                # Update moving averages
+                lg2_mavg = args.decay * lg2_mavg + (1 - args.decay) * lg2.item()
+                ll2_mavg = args.decay * ll2_mavg + (1 - args.decay) * ll2.item()
+                lr2_mavg = args.decay * lr2_mavg + (1 - args.decay) * lr2.item()
+                le2_mavg = args.decay * le2_mavg + (1 - args.decay) * le2.item()
+
+                # Standardize losses
+                standard_lg2 = lg2 / lg2_mavg
+                standard_ll2 = ll2 / ll2_mavg
+                standard_lr2 = lr2 / lr2_mavg
+                standard_le2 = le2 / le2_mavg
+
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
-                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (100 * le2)
+                lt2 = (args.alpha * standard_lg2) + (args.beta * standard_ll2) + (args.gamma * standard_lr2) + (args.nu * standard_le2)
 
                 lt2_tot += lt2
-                lg2_tot += lg2
-                ll2_tot += ll2
-                lr2_tot += lr2
+                lg2_tot += standard_lg2
+                ll2_tot += standard_ll2
+                lr2_tot += standard_lr2
+                le2_tot += standard_le2
 
             ## backward pass
             lt1_tot.backward()
@@ -186,11 +216,13 @@ if __name__ == '__main__':
             batch_global_loss1.append(lg1_tot.detach().item())
             batch_local_loss1.append(ll1_tot.detach().item())
             batch_reg_loss1.append(lr1_tot.detach().item())
+            batch_eigen_loss1.append(le1_tot.detach().item())
 
             batch_tot_loss2.append(lt2_tot.detach().item())
             batch_global_loss2.append(lg2_tot.detach().item())
             batch_local_loss2.append(ll2_tot.detach().item())
             batch_reg_loss2.append(lr2_tot.detach().item())
+            batch_eigen_loss2.append(le2_tot.detach().item())
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
@@ -198,6 +230,7 @@ if __name__ == '__main__':
         epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1).to(device))
         epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
         epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
+        epochs_eigen_loss.append(torch.stack([torch.tensor(batch_eigen_loss1), torch.tensor(batch_eigen_loss2)], axis=1).to(device))
         
         # update tqdm
         pbar.update(1)
@@ -208,6 +241,7 @@ if __name__ == '__main__':
     epochs_global_loss = torch.stack(epochs_global_loss)
     epochs_local_loss = torch.stack(epochs_local_loss)
     epochs_reg_loss = torch.stack(epochs_reg_loss)
+    epochs_eigen_loss = torch.stack(epochs_eigen_loss)
 
     pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
@@ -266,9 +300,11 @@ if __name__ == '__main__':
         "epochs_global_loss": epochs_global_loss,
         "epochs_local_loss": epochs_local_loss,
         "epochs_reg_loss": epochs_reg_loss,
+        "epochs_eigen_loss": epochs_eigen_loss
     }
 
-    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+    weights_name = f'alpha{int(args.alpha)}_beta{int(args.beta)}_gamma{int(args.gamma)}_nu{int(args.nu)}'
+    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
