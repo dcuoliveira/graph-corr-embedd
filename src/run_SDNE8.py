@@ -288,19 +288,19 @@ if __name__ == '__main__':
     }
 
     predictions = {
-        "train_predictions": epochs_predictions,
-        "test_predictions": test_results,
+        "train_predictions": epochs_predictions.cpu(),
+        "test_predictions": test_results.cpu(),
     }
 
     training_info = {
-        "train_loss": epochs_tot_loss,
+        "train_loss": epochs_tot_loss.cpu(),
     }
 
     epochs_loss = {
-        "epochs_global_loss": epochs_global_loss,
-        "epochs_local_loss": epochs_local_loss,
-        "epochs_reg_loss": epochs_reg_loss,
-        "epochs_eigen_loss": epochs_eigen_loss
+        "epochs_global_loss": epochs_global_loss.cpu(),
+        "epochs_local_loss": epochs_local_loss.cpu(),
+        "epochs_reg_loss": epochs_reg_loss.cpu(),
+        "epochs_eigen_loss": epochs_eigen_loss.cpu()
     }
 
     weights_name = f'alpha{int(args.alpha)}_beta{int(args.beta)}_gamma{int(args.gamma)}_nu{int(args.nu)}'

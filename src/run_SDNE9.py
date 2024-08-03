@@ -147,7 +147,7 @@ if __name__ == '__main__':
             x2_hat, z2, z2_norm = model2.forward(x2)
 
             # compute correlation between embeddings (true target)
-                pred_cov = model1.compute_spearman_rank_correlation_tensor(x=z1.flatten().detach(), y=z2.flatten().detach())
+            pred_cov = model1.compute_spearman_rank_correlation_tensor(x=z1.flatten().detach(), y=z2.flatten().detach())
 
             # store pred and true values
             batch_predictions.append([pred_cov, data.y])
@@ -328,26 +328,26 @@ if __name__ == '__main__':
     }
 
     predictions = {
-        "epochs_train_predictions": epochs_predictions,
-        "epochs_val_predictions": all_val_predictions,
-        "test_predictions": test_results,
+        "epochs_train_predictions": epochs_predictions.cpu(),
+        "epochs_val_predictions": all_val_predictions.cpu(),
+        "test_predictions": test_results.cpu(),
     }
 
     training_info = {
-        "train_loss": epochs_tot_loss,
+        "train_loss": epochs_tot_loss.cpu(),
     }
 
     epochs_loss = {
-        "epochs_global_loss": epochs_global_loss,
-        "epochs_local_loss": epochs_local_loss,
-        "epochs_reg_loss": epochs_reg_loss,
+        "epochs_global_loss": epochs_global_loss.cpu(),
+        "epochs_local_loss": epochs_local_loss.cpu(),
+        "epochs_reg_loss": epochs_reg_loss.cpu(),
     }
 
     val_loss = {
-        "val_loss": val_tot_loss,
-        "val_global_loss": val_global_loss,
-        "val_local_loss": val_local_loss,
-        "val_reg_loss": val_reg_loss,
+        "val_loss": val_tot_loss.cpu(),
+        "val_global_loss": val_global_loss.cpu(),
+        "val_local_loss": val_local_loss.cpu(),
+        "val_reg_loss": val_reg_loss.cpu(),
     }
 
     model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
