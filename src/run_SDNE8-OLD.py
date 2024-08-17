@@ -88,7 +88,7 @@ if __name__ == '__main__':
     loss_eigen = LossEigen()
 
     # initialize tqdm
-    pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(sim.n_simulations, total=sim.n_simulations, desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     epochs_reg_loss = torch.stack(epochs_reg_loss)
     epochs_eigen_loss = torch.stack(epochs_eigen_loss)
 
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
+    pbar = tqdm(sim.n_simulations, total=sim.n_simulations, desc=f"Running {args.model_name} model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
