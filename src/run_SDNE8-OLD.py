@@ -19,11 +19,11 @@ from utils.parsers import str_2_bool
 parser = argparse.ArgumentParser()
 
 # General parameters
-parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1a")
+parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne3")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8old")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -192,9 +192,6 @@ if __name__ == '__main__':
         epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
         epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
         epochs_eigen_loss.append(torch.stack([torch.tensor(batch_eigen_loss1), torch.tensor(batch_eigen_loss2)], axis=1).to(device))
-
-        # update tqdm
-        pbar.update(1)
 
     # pred list to tensor
     epochs_predictions = torch.stack(epochs_predictions)
