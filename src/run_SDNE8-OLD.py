@@ -23,7 +23,7 @@ parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="s
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne6old")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne3")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     # initialize tqdm
     pbar = tqdm(range(args.epochs), total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
-    epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss = [], [], [], []
+    epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
     # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
@@ -105,12 +105,12 @@ if __name__ == '__main__':
             filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
         
-            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1 = [], [], [], []
-            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2 = [], [], [], []
+            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
+            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
             batch_predictions = []
 
-            lt1_tot, lg1_tot, ll1_tot, lr1_tot = 0, 0, 0, 0
-            lt2_tot, lg2_tot, ll2_tot, lr2_tot = 0, 0, 0, 0
+            lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
+            lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
             for data in filtered_loader:
                 # Move data to the appropriate device
                 data = data.to(device)
@@ -147,6 +147,7 @@ if __name__ == '__main__':
                 lg1_tot += lg1
                 ll1_tot += ll1
                 lr1_tot += lr1
+                le1_tot += le1
 
                 # compute loss functions II
                 ll2 = loss_local.forward(adj=x2, z=z2)
@@ -162,6 +163,7 @@ if __name__ == '__main__':
                 lg2_tot += lg2
                 ll2_tot += ll2
                 lr2_tot += lr2
+                le2_tot += le2
 
             ## backward pass
             lt1_tot.backward()
@@ -175,11 +177,13 @@ if __name__ == '__main__':
             batch_global_loss1.append(lg1_tot.detach().item())
             batch_local_loss1.append(ll1_tot.detach().item())
             batch_reg_loss1.append(lr1_tot.detach().item())
+            batch_eigen_loss1.append(le1_tot.detach().item())
 
             batch_tot_loss2.append(lt2_tot.detach().item())
             batch_global_loss2.append(lg2_tot.detach().item())
             batch_local_loss2.append(ll2_tot.detach().item())
             batch_reg_loss2.append(lr2_tot.detach().item())
+            batch_eigen_loss2.append(le2_tot.detach().item())
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
@@ -187,7 +191,8 @@ if __name__ == '__main__':
         epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1).to(device))
         epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
         epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
-        
+        epochs_eigen_loss.append(torch.stack([torch.tensor(batch_eigen_loss1), torch.tensor(batch_eigen_loss2)], axis=1).to(device))
+
         # update tqdm
         pbar.update(1)
 
@@ -197,6 +202,7 @@ if __name__ == '__main__':
     epochs_global_loss = torch.stack(epochs_global_loss)
     epochs_local_loss = torch.stack(epochs_local_loss)
     epochs_reg_loss = torch.stack(epochs_reg_loss)
+    epochs_eigen_loss = torch.stack(epochs_eigen_loss)
 
     pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
@@ -243,15 +249,19 @@ if __name__ == '__main__':
     }
 
     predictions = {
-        "train_predictions": epochs_predictions,
-        "test_predictions": test_results,
+        "train_predictions": epochs_predictions.cpu(),
+        "test_predictions": test_results.cpu(),
     }
 
     training_info = {
-        "train_loss": epochs_tot_loss,
-        "epochs_global_loss": epochs_global_loss,
-        "epochs_local_loss": epochs_local_loss,
-        "epochs_reg_loss": epochs_reg_loss,
+        "train_loss": epochs_tot_loss.cpu(),
+    }
+
+    epochs_loss = {
+        "epochs_global_loss": epochs_global_loss.cpu(),
+        "epochs_local_loss": epochs_local_loss.cpu(),
+        "epochs_reg_loss": epochs_reg_loss.cpu(),
+        "epochs_eigen_loss": epochs_eigen_loss.cpu()
     }
 
     model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
@@ -266,11 +276,13 @@ if __name__ == '__main__':
         save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
+        save_pickle(path=f"{output_path}/sample_epochs_loss.pkl", obj=epochs_loss)
         torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
     else:
         save_pickle(path=f"{output_path}/args.pkl", obj=outargs)
         save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
         save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
+        save_pickle(path=f"{output_path}/epochs_loss.pkl", obj=epochs_loss)
         torch.save(model1.state_dict(), f"{output_path}/model1.pth")
         torch.save(model2.state_dict(), f"{output_path}/model2.pth")
