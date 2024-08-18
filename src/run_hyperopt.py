@@ -187,6 +187,7 @@ def objective(params):
     return {'loss': final_loss, 'status': STATUS_OK}
 
 
+
 if __name__ == '__main__':
     # Argument parsing
     parser = argparse.ArgumentParser()
@@ -195,3 +196,35 @@ if __name__ == '__main__':
     # Example:
     parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
     parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
+    parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+    parser.add_argument('--batch_size', type=int, help='Batch size to train the model.', default=1)
+    parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8")
+    parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
+    parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
+    parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
+    parser.add_argument('--n_hidden', type=int, help='Number of hidden dimensions in the nn.', default=100)
+    parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the encoder network.', default=1)
+    parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
+    parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
+    parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
+    parser.add_argument('--decay', type=float, default=0.9, help='Decay rate for moving averages.')
+
+    args = parser.parse_args()
+
+    # Define the search space for hyperopt
+    space = {
+        'alpha': hp.uniform('alpha', 0.1, 10.0),
+        'beta': hp.uniform('beta', 0.1, 10.0),
+        'gamma': hp.uniform('gamma', 0.1, 10.0),
+        'nu': hp.uniform('nu', 0.1, 10.0)
+    }
+
+    # Run hyperopt
+    trials = Trials()
+    best = fmin(fn=objective,
+                space=space,
+                algo=tpe.suggest,
+                max_evals=100,
+                trials=trials)
+
+    print("Best parameters found: ", best)
