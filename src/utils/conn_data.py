@@ -1,6 +1,8 @@
 import pickle
 import joblib
 import os
+import gc
+import _pickle as cpickle
 
 def save_pickle(path: str,
                 obj: dict):
@@ -46,3 +48,17 @@ def save_inputs_piecewise(inputs,
             "embeddings": embeddings[i],
         }
         save_pickle(path=os.path.join(path, f"inputs_{i}.pkl"), obj=tmp_inputs)
+
+
+def load_pickle_fast(path: str):
+    gc.disable()
+    try:
+        if path.endswith(".joblib"):
+            target_dict = joblib.load(path)
+        else:
+            with open(path, 'rb') as handle:
+                target_dict = cpickle.load(handle)
+    finally:
+        gc.enable()
+
+    return target_dict

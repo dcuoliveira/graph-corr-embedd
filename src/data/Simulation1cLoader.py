@@ -1,5 +1,6 @@
 import os
 import sys
+import pickle
 
 # sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -8,10 +9,16 @@ from torch_geometric.utils.convert import from_networkx
 from torch_geometric.data import Data, DataLoader
 from torch_geometric.utils import from_networkx
 import networkx as nx
+
+from tqdm import tqdm
+
 import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 
-from utils.conn_data import load_pickle
+from utils.conn_data import load_pickle, load_pickle_fast
 
 class Simulation1cLoader(object):
     """
@@ -24,60 +31,88 @@ class Simulation1cLoader(object):
 
     """
     
-    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False ):
+    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False, preprocessed: bool=False):
         super().__init__()
     
         self.graph_name = graph_name
         self.name = name
-        self._read_data(sample=sample)
+        self.preprocessed = preprocessed
+        self._read_data(sample=sample, preprocessed=preprocessed)
 
     def _read_data(self, sample: bool=False):
         if sample:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
+            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "sample_graph_info.pkl"))
         else:
-            self.graph_data = load_pickle(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
+            self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
+                
+    def save_processed_graph_data(self, graph_data_list):
+        save_dir = os.path.join(os.path.dirname(__file__), "data", "inputs", self.graph_name)
+        os.makedirs(save_dir, exist_ok=True)
+        file_path = os.path.join(save_dir, "all_graph_info_processed.pkl")
+        with open(file_path, 'wb') as f:
+            pickle.dump(graph_data_list, f)
+        print(f"Processed graph data saved to {file_path}")
 
-    def create_graph_list(self):
+    def load_processed_graph_data(self):
+        file_path = os.path.join(os.path.dirname(__file__), "data", "inputs", self.graph_name, "all_graph_info_processed.pkl")
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                graph_data_list = pickle.load(f)
+            print(f"Processed graph data loaded from {file_path}")
+            return graph_data_list
+        else:
+            print(f"No processed data found at {file_path}.")
+            return None
+
+    def create_graph_list(self, load_preprocessed=False):
         graph_data_list = []
 
-        for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
-            cov_val = float(cov_tag)
+        if not load_preprocessed:
+            for i, (cov_tag, graph_list) in enumerate(self.graph_data.items()):
+                cov_val = float(cov_tag)
 
-            for n_sim, graph_pair_info in enumerate(graph_list):
+                for n_sim, graph_pair_info in tqdm(enumerate(graph_list), total=len(graph_list), desc=f"Processing Graphs for Cov {cov_tag}"):
+                    graph1 = graph_pair_info['graph1']
+                    graph2 = graph_pair_info['graph2']
 
-                graph1 = graph_pair_info['graph1']
-                graph2 = graph_pair_info['graph2']
+                    # Convert NetworkX graphs to adjacency matrices
+                    adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
+                    adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
 
-                # Convert NetworkX graphs to adjacency matrices
-                adj1 = torch.tensor(nx.adjacency_matrix(graph1).toarray())
-                adj2 = torch.tensor(nx.adjacency_matrix(graph2).toarray())
+                    # Use rows of adjacency matrices as features
+                    x1 = adj1.type(torch.float32)
+                    x2 = adj2.type(torch.float32)
 
-                # Use rows of adjacency matrices as features
-                x1 = adj1.type(torch.float32)
-                x2 = adj2.type(torch.float32)
+                    # Concatenate the edge indices for both graphs
+                    edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
 
-                # Concatenate the edge indices for both graphs
-                edge_index = torch.cat([from_networkx(graph1).edge_index, from_networkx(graph2).edge_index + graph1.number_of_nodes()], dim=1)
+                    # concatenate x1 and x2 creating a new dimension
+                    x = torch.stack([x1, x2], dim=0)
 
-                # concatenate x1 and x2 creating a new dimension
-                x = torch.stack([x1, x2], dim=0)
+                    if cov_val != np.round(graph_pair_info["cov"], 1):
+                        raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
+                    
+                    # Create a single Data object
+                    data = Data(x=x,
+                                edge_index=edge_index,
+                                y=torch.tensor([cov_val], dtype=torch.float),
+                                n_simulations=graph_pair_info["n_simulations"],
+                                n_graphs=graph_pair_info["n_graphs"])
 
-                if cov_val != np.round(graph_pair_info["cov"], 1):
-                    raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
-                
-                # Create a single Data object
-                data = Data(x=x,
-                            edge_index=edge_index,
-                            y=torch.tensor([cov_val], dtype=torch.float),
-                            n_simulations=graph_pair_info["n_simulations"],
-                            n_graphs=graph_pair_info["n_graphs"])
+                    graph_data_list.append(data)
 
-                graph_data_list.append(data)
+            self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
+            self.covs = np.unique([data.y.item() for data in graph_data_list])
 
-        self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
-        self.covs = np.unique([data.y.item() for data in graph_data_list])
+            if save_processed:
+                self.save_processed_graph_data(graph_data_list)
+            return graph_data_list
 
-        return graph_data_list
+        else:
+            graph_data_list = load_processed_graph_data()
+            self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
+            self.covs = np.unique([data.y.item() for data in graph_data_list])
+            return graph_data_list
 
     def create_graph_loader(self, batch_size: int=1):
         graph_data_list = []
