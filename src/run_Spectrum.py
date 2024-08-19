@@ -32,7 +32,7 @@ if __name__ == '__main__':
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
     elif args.dataset_name == "simulation1c":
-        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name, preprocessed=True)
     else:
         raise Exception('Dataset not found!')
     dataset_list = sim.create_graph_list()

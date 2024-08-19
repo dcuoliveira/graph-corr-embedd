@@ -55,13 +55,16 @@ if __name__ == '__main__':
     args.shuffle = str_2_bool(args.shuffle)
 
     # define dataset
+    print('Loading the data from the simulation!')
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+        dataset_list = sim.create_graph_list()
+
     elif args.dataset_name == "simulation1c":
-        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name, preprocessed=False)
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
-    dataset_list = sim.create_graph_list()
 
     # train, validation, test split
     n = len(dataset_list)
