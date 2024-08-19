@@ -4,6 +4,7 @@ import argparse
 import os
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
+from model_utils.EarlyStopper import EarlyStopper
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
@@ -23,7 +24,7 @@ parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="s
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8old")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8oldes")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -37,6 +38,8 @@ parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparam
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
+parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
+parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 
 if __name__ == '__main__':
 
@@ -59,6 +62,9 @@ if __name__ == '__main__':
     else:
         raise Exception('Dataset not found!')
     dataset_list = sim.create_graph_list()
+
+    # define early stopper
+    early_stopper = EarlyStopper(patience=10, min_delta=100)
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -88,7 +94,7 @@ if __name__ == '__main__':
     loss_eigen = LossEigen()
 
     # initialize tqdm
-    pbar = tqdm(args.epochs, total=args.epochs, desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
@@ -173,6 +179,16 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
+            ## early stopping
+            if args.early_stopping:
+                if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+                    break
+
+            ## gradient clipping
+            if args.gradient_clipping:
+                torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
+
             batch_tot_loss1.append(lt1_tot.detach().item())
             batch_global_loss1.append(lg1_tot.detach().item())
             batch_local_loss1.append(ll1_tot.detach().item())
@@ -201,7 +217,7 @@ if __name__ == '__main__':
     epochs_reg_loss = torch.stack(epochs_reg_loss)
     epochs_eigen_loss = torch.stack(epochs_eigen_loss)
 
-    pbar = tqdm(sim.n_simulations, total=sim.n_simulations, desc=f"Running {args.model_name} model on test data")
+    pbar = tqdm(range(len(sim.n_simulations)), total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
