@@ -39,6 +39,7 @@ parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperp
 parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
 parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
+parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 
 if __name__ == '__main__':
 
@@ -178,9 +179,15 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
+            ## early stopping
             if args.early_stopping:
                 if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
                     break
+
+            ## gradient clipping
+            if args.gradient_clipping:
+                torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
 
             batch_tot_loss1.append(lt1_tot.detach().item())
             batch_global_loss1.append(lg1_tot.detach().item())
