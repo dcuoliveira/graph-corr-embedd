@@ -94,7 +94,7 @@ if __name__ == '__main__':
     loss_eigen = LossEigen()
 
     # initialize tqdm
-    pbar = tqdm(args.epochs, total=args.epochs, desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
