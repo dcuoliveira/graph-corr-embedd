@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
 from model_utils.EarlyStopper import EarlyStopper
+import numpy as np
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
@@ -53,6 +54,8 @@ if __name__ == '__main__':
     # convert to boolean
     args.sample = str_2_bool(args.sample)
     args.shuffle = str_2_bool(args.shuffle)
+    args.early_stopping = str_2_bool(args.early_stopping)
+    args.gradient_clipping = str_2_bool(args.gradient_clipping)
 
     # define dataset
     if args.dataset_name == "simulation1a":
@@ -106,14 +109,13 @@ if __name__ == '__main__':
         opt2.zero_grad()
 
         epoch_results = []
+        batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
+        batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
+        batch_predictions = []
         for cov in sim.covs:
 
-            filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
+            filtered_data_list = [data for data in dataset_list if (np.round(data.y.item(), 1) == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
-        
-            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
-            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
-            batch_predictions = []
 
             lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
             lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
@@ -179,11 +181,6 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
-            ## early stopping
-            if args.early_stopping:
-                if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
-                    break
-
             ## gradient clipping
             if args.gradient_clipping:
                 torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
@@ -200,6 +197,11 @@ if __name__ == '__main__':
             batch_local_loss2.append(ll2_tot.detach().item())
             batch_reg_loss2.append(lr2_tot.detach().item())
             batch_eigen_loss2.append(le2_tot.detach().item())
+
+        ## early stopping
+        if args.early_stopping:
+            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+                break
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
@@ -225,7 +227,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (np.round(data.y.item(), 1) == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 
