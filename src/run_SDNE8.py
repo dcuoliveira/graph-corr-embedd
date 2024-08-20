@@ -56,13 +56,18 @@ if __name__ == '__main__':
     args.shuffle = str_2_bool(args.shuffle)
 
     # define dataset
+    print('Loading the data from the simulation!')
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+        dataset_list = sim.create_graph_list()
+
     elif args.dataset_name == "simulation1c":
-        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name))
+        print('Loading the simulation data!')
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
-    dataset_list = sim.create_graph_list()
+    print('Finish Loading')
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,

@@ -31,12 +31,11 @@ class Simulation1cLoader(object):
 
     """
     
-    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False, preprocessed: bool=False):
+    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False)
         super().__init__()
     
         self.graph_name = graph_name
         self.name = name
-        self.preprocessed = preprocessed
         self._read_data(sample=sample)
 
     def _read_data(self, sample: bool=False):

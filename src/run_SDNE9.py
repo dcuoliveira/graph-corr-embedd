@@ -61,13 +61,13 @@ if __name__ == '__main__':
         dataset_list = sim.create_graph_list()
 
     elif args.dataset_name == "simulation1c":
-        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name, preprocessed=False)
+        sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
         dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
-
     print('Finish Loading')
+
     # train, validation, test split
     n = len(dataset_list)
     train_size = int(0.8 * n)
