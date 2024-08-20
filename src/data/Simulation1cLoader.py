@@ -31,7 +31,7 @@ class Simulation1cLoader(object):
 
     """
     
-    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False)
+    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False):
         super().__init__()
     
         self.graph_name = graph_name
@@ -45,7 +45,7 @@ class Simulation1cLoader(object):
             self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
                 
     def save_processed_graph_data(self, graph_data_list):
-        save_dir = os.path.join(os.path.dirname(__file__), "data", "inputs", self.graph_name)
+        save_dir = os.path.join(os.path.dirname(__file__), "data", "inputs", "simulation1c", self.graph_name)
         os.makedirs(save_dir, exist_ok=True)
         file_path = os.path.join(save_dir, "all_graph_info_processed.pkl")
         with open(file_path, 'wb') as f:
@@ -53,15 +53,14 @@ class Simulation1cLoader(object):
         print(f"Processed graph data saved to {file_path}")
 
     def load_processed_graph_data(self):
-        file_path = os.path.join(os.path.dirname(__file__), "data", "inputs", self.graph_name, "all_graph_info_processed.pkl")
+        file_path = os.path.join(os.path.dirname(__file__), "data", "inputs", "simulation1c", self.graph_name, "all_graph_info_processed.pkl")
         if os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 graph_data_list = pickle.load(f)
             print(f"Processed graph data loaded from {file_path}")
             return graph_data_list
         else:
-            print(f"No processed data found at {file_path}.")
-            return None
+            raise Exception('No processed data found!')
 
     def create_graph_list(self, load_preprocessed=False):
         graph_data_list = []
@@ -98,7 +97,7 @@ class Simulation1cLoader(object):
                                 n_simulations=graph_pair_info["n_simulations"],
                                 n_graphs=graph_pair_info["n_graphs"])
 
-                graph_data_list.append(data)
+                    graph_data_list.append(data)
 
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
             self.covs = np.sort(np.unique([np.round(data.y.item(), 1) for data in graph_data_list]))
