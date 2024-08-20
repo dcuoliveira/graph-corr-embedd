@@ -205,9 +205,6 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
-            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
-                break
-
             ## gradient clipping
             torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
             torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
@@ -223,6 +220,10 @@ if __name__ == '__main__':
             batch_local_loss2.append(ll2_tot.detach().item())
             batch_reg_loss2.append(lr2_tot.detach().item())
             batch_eigen_loss2.append(le2_tot.detach().item())
+
+        
+        if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+            break
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
