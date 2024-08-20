@@ -4,6 +4,7 @@ import argparse
 import os
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
+import numpy as np
 
 from models.SDNE import SDNE
 from model_utils.EarlyStopper import EarlyStopper
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     loss_eigen = LossEigen()
 
     # initialize tqdm
-    pbar = tqdm(range(args.epochs), total=len(range(args.epochs)), desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
@@ -108,14 +109,13 @@ if __name__ == '__main__':
         opt2.zero_grad()
 
         epoch_results = []
+        batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
+        batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
+        batch_predictions = []
         for cov in sim.covs:
 
-            filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
+            filtered_data_list = [data for data in dataset_list if (np.round(data.y.item(), 1) == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
-        
-            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
-            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
-            batch_predictions = []
 
             lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
             lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
@@ -205,9 +205,6 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
-            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
-                break
-
             ## gradient clipping
             torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
             torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
@@ -224,6 +221,10 @@ if __name__ == '__main__':
             batch_reg_loss2.append(lr2_tot.detach().item())
             batch_eigen_loss2.append(le2_tot.detach().item())
 
+        
+        if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+            break
+
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
         epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1).to(device))
@@ -231,9 +232,6 @@ if __name__ == '__main__':
         epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
         epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
         epochs_eigen_loss.append(torch.stack([torch.tensor(batch_eigen_loss1), torch.tensor(batch_eigen_loss2)], axis=1).to(device))
-        
-        # update tqdm
-        pbar.update(1)
 
     # pred list to tensor
     epochs_predictions = torch.stack(epochs_predictions)
@@ -251,7 +249,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (np.round(data.y.item(), 1) == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 

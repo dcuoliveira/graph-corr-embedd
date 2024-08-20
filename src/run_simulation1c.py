@@ -31,20 +31,22 @@ if __name__ == "__main__":
         os.makedirs(output_path)
     
     # generate covariance between gaussian random variables
-    covs_xy = np.arange(-1, 1, 0.1)
+    covs_xy = np.round(np.arange(-1, 1.1, 0.1), 1)
 
     # init graph sim class
     gs = GraphSim(graph_name=args.graph_name)
 
     # check if sample graph
     if args.sample:
-        covs_xy = covs_xy[:10]
         args.n_simulations = 5
         args.n_graphs = 5
 
     # start simulation procedure
     all_graphs = {}
     for s in tqdm(covs_xy, total=len(covs_xy), desc=f"Simulating graphs for {args.simulation_name} | {args.graph_name}"):
+
+        if s == 0:
+            s = 0
 
         graphs_given_cov = []
         for i in range(args.n_simulations):
@@ -87,7 +89,7 @@ if __name__ == "__main__":
                     "graph2": graph2,
                     "seed": save_seed,
                     "p": ps[j,],
-                    "cov": s # cov = corr becaus variances are 1
+                    "cov": np.round(s, 1) # cov = corr becaus variances are 1
                 }
 
                 graphs_given_cov.append(sim_graph_info)
