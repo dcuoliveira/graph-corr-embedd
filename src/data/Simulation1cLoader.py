@@ -31,13 +31,12 @@ class Simulation1cLoader(object):
 
     """
     
-    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False, preprocessed: bool=False):
+    def __init__(self, graph_name: str, name: str="simulation1", sample: bool=False)
         super().__init__()
     
         self.graph_name = graph_name
         self.name = name
-        self.preprocessed = preprocessed
-        self._read_data(sample=sample, preprocessed=preprocessed)
+        self._read_data(sample=sample)
 
     def _read_data(self, sample: bool=False):
         if sample:
@@ -119,7 +118,7 @@ class Simulation1cLoader(object):
             self.save_processed_graph_data(graph_data_list)
             return graph_data_list
         else:
-            graph_data_list = load_processed_graph_data()
+            graph_data_list = self.load_processed_graph_data()
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
             self.covs = np.unique([data.y.item() for data in graph_data_list])
             return graph_data_list
