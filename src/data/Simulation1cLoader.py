@@ -98,16 +98,26 @@ class Simulation1cLoader(object):
                                 y=torch.tensor([cov_val], dtype=torch.float),
                                 n_simulations=graph_pair_info["n_simulations"],
                                 n_graphs=graph_pair_info["n_graphs"])
+                if cov_val != np.round(graph_pair_info["cov"], 1):
+                    raise ValueError(f"Covariance value does not match: {cov_val}, {n_sim}")
+                
+                # Create a single Data object
+                data = Data(x=x,
+                            edge_index=edge_index,
+                            y=torch.round(torch.tensor([cov_val], dtype=torch.float), decimals=1),
+                            n_simulations=graph_pair_info["n_simulations"],
+                            n_graphs=graph_pair_info["n_graphs"])
 
-                    graph_data_list.append(data)
+                graph_data_list.append(data)
 
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
             self.covs = np.unique([data.y.item() for data in graph_data_list])
+        self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
+        self.covs = np.sort(np.unique([np.round(data.y.item(), 1) for data in graph_data_list]))
 
-            if save_processed:
-                self.save_processed_graph_data(graph_data_list)
+        if save_processed:
+            self.save_processed_graph_data(graph_data_list)
             return graph_data_list
-
         else:
             graph_data_list = load_processed_graph_data()
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
