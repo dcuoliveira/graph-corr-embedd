@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # check if sample graph
     if args.sample:
         args.n_simulations = 5
-        args.n_graphs = 5
+        args.n_graphs = 10
 
     # start simulation procedure
     all_graphs = {}
