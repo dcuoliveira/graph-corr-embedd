@@ -1,14 +1,12 @@
-
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
 from tqdm import tqdm
 import torch
 import torch.optim as optim
 import argparse
 import os
-from tqdm import tqdm
-from torch_geometric.data import DataLoader
 import random
 import numpy as np
+import pandas as pd
 
 from models.SDNE import SDNE
 from model_utils.EarlyStopper import EarlyStopper
@@ -39,13 +37,42 @@ parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the en
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
-#parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
-#parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-#parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
-#parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
-parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
+parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stopping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Using device: {device}")
+
+# Evaluate MSE on the test set
+def evaluate_mse(test_list, model1, model2):
+    mse_loss = torch.nn.MSELoss()
+    model1.eval()
+    model2.eval()
+    
+    mse1_tot, mse2_tot = 0, 0
+    with torch.no_grad():
+        for data in test_list:
+            data = data.to(device)
+            x1 = data.x[0, :, :].to(device)
+            x2 = data.x[1, :, :].to(device)
+            
+            x1_hat, _, _ = model1.forward(x1)
+            x2_hat, _, _ = model2.forward(x2)
+            
+            mse1 = mse_loss(x1_hat, x1)
+            mse2 = mse_loss(x2_hat, x2)
+            
+            mse1_tot += mse1.item()
+            mse2_tot += mse2.item()
+
+    mse1_avg = mse1_tot / len(test_list)
+    mse2_avg = mse2_tot / len(test_list)
+
+    print(f"Test Set MSE for Model 1: {mse1_avg}")
+    print(f"Test Set MSE for Model 2: {mse2_avg}")
+
+    return mse1_avg, mse2_avg
+    
 space = {
     'alpha': hp.loguniform('alpha', np.log(1e-4), np.log(1e-1)),
     'beta': hp.loguniform('beta', np.log(1e0), np.log(1e2)),
@@ -56,10 +83,6 @@ space = {
 args = parser.parse_args()
 
 def objective(params):
-    # Check if CUDA is available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-    
     # Load dataset
     print('Loading the data from the simulation!')
     if args.dataset_name == "simulation1a":
@@ -203,9 +226,12 @@ def objective(params):
         val_tot_loss.append(torch.mean(torch.stack([lt1_val_tot, lt2_val_tot])))
 
     final_val_loss = val_tot_loss[-1].item()
+    mse1, mse2 = evaluate_mse(test_list=test_list, model1=model1, model2=model2)
 
     return {
         'loss': final_val_loss,
+        'mse1': mse1,
+        'mse2': mse2,
         'status': STATUS_OK,
         'alpha': alpha,
         'beta': beta,
@@ -230,7 +256,6 @@ best_gamma = best_params['gamma']
 best_nu = best_params['nu']
 
 # Save the trial results
-#output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}_hyperopt"
 output_path = '.'
 print('Saving: ', output_path)
 if not os.path.exists(output_path):
@@ -239,6 +264,5 @@ if not os.path.exists(output_path):
 save_pickle(path=f"{output_path}/hyperopt_trials.pkl", obj=trials)
 save_pickle(path=f"{output_path}/best_params.pkl", obj=best_params)
 
-import pandas as pd
 results_df = pd.DataFrame(trials.results)
 results_df.to_csv(f"{output_path}/hyperopt_results.csv", index=False)
