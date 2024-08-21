@@ -74,10 +74,10 @@ def evaluate_mse(test_list, model1, model2):
     return mse1_avg, mse2_avg
     
 space = {
-    'alpha': hp.loguniform('alpha', np.log(1e-4), np.log(1e-1)),
-    'beta': hp.loguniform('beta', np.log(1e0), np.log(1e2)),
-    'gamma': hp.loguniform('gamma', np.log(1e2), np.log(1e4)),
-    'nu': hp.loguniform('nu', np.log(1e-6), np.log(1e-4)),
+    'alpha': hp.loguniform('alpha', np.log(1e-5), np.log(1e0)),
+    'beta': hp.loguniform('beta', np.log(1e0), np.log(1e3)),
+    'gamma': hp.loguniform('gamma', np.log(1e1), np.log(1e5)),
+    'nu': hp.loguniform('nu', np.log(1e-7), np.log(1e-3)),
 }
 
 args = parser.parse_args()
@@ -245,7 +245,7 @@ best_params = fmin(
     fn=objective,
     space=space,
     algo=tpe.suggest,
-    max_evals=20,  
+    max_evals=100,  
     trials=trials
 )
 
