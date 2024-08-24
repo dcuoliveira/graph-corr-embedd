@@ -45,7 +45,7 @@ class Simulation1cLoader(object):
             self.graph_data = load_pickle_fast(os.path.join(os.path.dirname(__file__), "inputs", self.name, self.graph_name, "all_graph_info.pkl"))
                 
     def save_processed_graph_data(self, graph_data_list):
-        save_dir = os.path.join(os.path.dirname(__file__), "data", "inputs", "simulation1c", self.graph_name)
+        save_dir = os.path.join(os.path.dirname(__file__), "inputs", "simulation1c", self.graph_name)
         os.makedirs(save_dir, exist_ok=True)
         file_path = os.path.join(save_dir, "all_graph_info_processed.pkl")
         with open(file_path, 'wb') as f:
@@ -53,7 +53,7 @@ class Simulation1cLoader(object):
         print(f"Processed graph data saved to {file_path}")
 
     def load_processed_graph_data(self):
-        file_path = os.path.join(os.path.dirname(__file__), "data", "inputs", "simulation1c", self.graph_name, "all_graph_info_processed.pkl")
+        file_path = os.path.join(os.path.dirname(__file__), "inputs", "simulation1c", self.graph_name, "all_graph_info_processed.pkl")
         if os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 graph_data_list = pickle.load(f)
