@@ -37,8 +37,9 @@ parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probab
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
+parser.add_argument('--theta', type=float, default=1, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
+parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
 parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 
@@ -108,6 +109,8 @@ if __name__ == '__main__':
 
     # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
     # SDNE TRAINING: accumulates gradients on the epoch level
+    lg1_mavg, ll1_mavg, lr1_mavg, le1_mavg = 1, 1, 1, 1
+    lg2_mavg, ll2_mavg, lr2_mavg, le2_mavg = 1, 1, 1, 1
     for epoch in pbar:
 
         opt1.zero_grad()
@@ -154,7 +157,7 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
-                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (100 * le1)
+                lt1 = (args.alpha * lg1) + (args.theta * ll1) + (args.nu * lr1) + (args.gamma * le1)
 
                 lt1_tot += lt1
                 lg1_tot += lg1
@@ -170,7 +173,7 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
-                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (100 * le2)
+                lt2 = (args.alpha * lg2) + (args.theta * ll2) + (args.nu * lr2) + (args.gamma * le2)
 
                 lt2_tot += lt2
                 lg2_tot += lg2
