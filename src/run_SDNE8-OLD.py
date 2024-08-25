@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8oldes")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -42,6 +42,7 @@ parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparamet
 parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
 parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
+parser.add_argument('--stadardize_losses', type=bool, default=False, help='Bool to specify if to standardize the value of loss functions.')
 
 if __name__ == '__main__':
 
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
-        dataset_list = sim.create_graph_list(load_preprocessed=False)
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
@@ -109,8 +110,6 @@ if __name__ == '__main__':
 
     # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
     # SDNE TRAINING: accumulates gradients on the epoch level
-    lg1_mavg, ll1_mavg, lr1_mavg, le1_mavg = 1, 1, 1, 1
-    lg2_mavg, ll2_mavg, lr2_mavg, le2_mavg = 1, 1, 1, 1
     for epoch in pbar:
 
         opt1.zero_grad()
@@ -157,6 +156,12 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
+                if args.stadardize_losses:
+                    l1_sum = lg1.item() + ll1.item() + lr1.item() + le1.item()
+                    lg1 /= l1_sum
+                    ll1 /= l1_sum
+                    lr1 /= l1_sum
+                    le1 /= l1_sum
                 lt1 = (args.alpha * lg1) + (args.theta * ll1) + (args.nu * lr1) + (args.gamma * le1)
 
                 lt1_tot += lt1
@@ -173,6 +178,12 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
+                if args.stadardize_losses:
+                    l2_sum = lg2.item() + ll2.item() + lr2.item() + le2.item()
+                    lg2 /= l2_sum
+                    ll2 /= l2_sum
+                    lr2 /= l2_sum
+                    le2 /= l2_sum
                 lt2 = (args.alpha * lg2) + (args.theta * ll2) + (args.nu * lr2) + (args.gamma * le2)
 
                 lt2_tot += lt2
