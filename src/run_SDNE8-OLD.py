@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8oldes")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
@@ -37,10 +37,12 @@ parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probab
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
+parser.add_argument('--theta', type=float, default=1, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
+parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
 parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
+parser.add_argument('--stadardize_losses', type=bool, default=False, help='Bool to specify if to standardize the value of loss functions.')
 
 if __name__ == '__main__':
 
@@ -66,7 +68,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
-        dataset_list = sim.create_graph_list(load_preprocessed=False)
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
@@ -154,7 +156,13 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
-                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (100 * le1)
+                if args.stadardize_losses:
+                    l1_sum = lg1.item() + ll1.item() + lr1.item() + le1.item()
+                    lg1 /= l1_sum
+                    ll1 /= l1_sum
+                    lr1 /= l1_sum
+                    le1 /= l1_sum
+                lt1 = (args.alpha * lg1) + (args.theta * ll1) + (args.nu * lr1) + (args.gamma * le1)
 
                 lt1_tot += lt1
                 lg1_tot += lg1
@@ -170,7 +178,13 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
-                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (100 * le2)
+                if args.stadardize_losses:
+                    l2_sum = lg2.item() + ll2.item() + lr2.item() + le2.item()
+                    lg2 /= l2_sum
+                    ll2 /= l2_sum
+                    lr2 /= l2_sum
+                    le2 /= l2_sum
+                lt2 = (args.alpha * lg2) + (args.theta * ll2) + (args.nu * lr2) + (args.gamma * le2)
 
                 lt2_tot += lt2
                 lg2_tot += lg2
@@ -284,7 +298,11 @@ if __name__ == '__main__':
         "epochs_eigen_loss": epochs_eigen_loss.cpu()
     }
 
-    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+    if args.stadardize_losses:
+        weights_name = f'alpha{int(args.alpha)}_theta{int(args.theta)}_nu{int(args.nu)}_gamma{int(args.gamma)}'
+        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
+    else:
+        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
