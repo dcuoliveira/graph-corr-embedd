@@ -1,3 +1,5 @@
+
+
 import torch
 import torch.optim as optim
 import argparse
@@ -6,6 +8,8 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 import random
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 from models.SDNE import SDNE
 from model_utils.EarlyStopper import EarlyStopper
@@ -63,7 +67,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
-        dataset_list = sim.create_graph_list(load_preprocessed=False)
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
@@ -116,6 +120,11 @@ if __name__ == '__main__':
     loss_global = LossGlobal()
     loss_reg = LossReg()
     loss_eigen = LossEigen()
+
+    # Create a SummaryWriter for TensorBoard
+    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = f'runs/{args.model_name}_{current_time}'
+    writer = SummaryWriter(log_dir)
 
     # initialize tqdm
     pbar = tqdm(range(args.epochs), total=len(range(args.epochs)), desc=f"Running {args.model_name} model")
@@ -273,6 +282,24 @@ if __name__ == '__main__':
         val_local_loss.append(torch.stack([torch.tensor(val_local_loss1), torch.tensor(val_local_loss2)], axis=1).to(device))
         val_reg_loss.append(torch.stack([torch.tensor(val_reg_loss1), torch.tensor(val_reg_loss2)], axis=1).to(device))
 
+        # Log training metrics to TensorBoard
+        writer.add_scalar('Loss/Train/Total', torch.mean(torch.tensor(batch_tot_loss1 + batch_tot_loss2)), epoch)
+        writer.add_scalar('Loss/Train/Global', torch.mean(torch.tensor(batch_global_loss1 + batch_global_loss2)), epoch)
+        writer.add_scalar('Loss/Train/Local', torch.mean(torch.tensor(batch_local_loss1 + batch_local_loss2)), epoch)
+        writer.add_scalar('Loss/Train/Reg', torch.mean(torch.tensor(batch_reg_loss1 + batch_reg_loss2)), epoch)
+
+        # Log validation metrics to TensorBoard
+        writer.add_scalar('Loss/Val/Total', torch.mean(torch.tensor(val_tot_loss1 + val_tot_loss2)), epoch)
+        writer.add_scalar('Loss/Val/Global', torch.mean(torch.tensor(val_global_loss1 + val_global_loss2)), epoch)
+        writer.add_scalar('Loss/Val/Local', torch.mean(torch.tensor(val_local_loss1 + val_local_loss2)), epoch)
+        writer.add_scalar('Loss/Val/Reg', torch.mean(torch.tensor(val_reg_loss1 + val_reg_loss2)), epoch)
+
+        # Log predictions vs true values
+        writer.add_scalar('Predictions/Train', torch.mean(torch.tensor([pred[0] for pred in batch_predictions])), epoch)
+        writer.add_scalar('TrueValues/Train', torch.mean(torch.tensor([pred[1] for pred in batch_predictions])), epoch)
+        writer.add_scalar('Predictions/Val', torch.mean(torch.tensor([pred[0] for pred in val_predictions])), epoch)
+        writer.add_scalar('TrueValues/Val', torch.mean(torch.tensor([pred[1] for pred in val_predictions])), epoch)
+
         # update tqdm
         pbar.update(1)
 
@@ -327,6 +354,15 @@ if __name__ == '__main__':
             test_results.append(simulation_results)
                         
     test_results = torch.stack(test_results)
+
+    # Log test results to TensorBoard
+    for i, n in enumerate(sim.n_simulations):
+        for j, (pred_cov, true_cov) in enumerate(test_results[i]):
+            writer.add_scalar(f'TestResults/N{n}', pred_cov, j)
+            writer.add_scalar(f'TrueValues/N{n}', true_cov, j)
+
+    # Close the SummaryWriter
+    writer.close()
 
     outargs = {
         "args": args
