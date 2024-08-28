@@ -8,6 +8,8 @@ from tqdm import tqdm
 from torch_geometric.data import DataLoader
 from model_utils.EarlyStopper import EarlyStopper
 import numpy as np
+from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
+import pandas as pd
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
@@ -37,21 +39,24 @@ parser.add_argument('--n_layers_enc', type=int, help='Number of layers in the en
 parser.add_argument('--n_layers_dec', type=int, help='Number of layers in the decoder network.', default=1)
 parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probability).', default=0.5)
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
-parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
-parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--theta', type=float, default=1, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
-parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
-parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
+parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stopping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 parser.add_argument('--stadardize_losses', type=bool, default=False, help='Bool to specify if to standardize the value of loss functions.')
 
-if __name__ == '__main__':
+# Check if CUDA is available
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"Using device: {device}")
 
-    # Check if CUDA is available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
+# Hyperparameter search space
+space = {
+    'alpha': hp.uniform('alpha', float(1e-5), 1),
+    'beta': hp.uniform('beta', 1e-5, 1),
+    'theta': hp.uniform('theta', 1e-5, 1),
+    'nu': hp.uniform('nu', 1e-5, 1),
+    'gamma': hp.uniform('gamma', 1e-5, 1),
+}
 
+def objective(params):
     # parse args
     args = parser.parse_args()
 
@@ -66,7 +71,6 @@ if __name__ == '__main__':
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
         dataset_list = sim.create_graph_list()
-
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
@@ -74,6 +78,25 @@ if __name__ == '__main__':
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
+
+    # Train, validation, test split
+    n = len(dataset_list)
+    train_size = int(0.8 * n)
+    val_size = int(0.1 * n)
+    test_size = n - train_size - val_size
+    
+    train_idx = np.random.randint(0, n, size=train_size)
+    train_set = set(train_idx)
+    all_indices = set(range(n))
+    available_indices = all_indices - train_set
+    available_indices = list(available_indices)
+    val_idx = np.random.choice(available_indices, size=val_size, replace=False)
+    available_indices = all_indices - set(val_idx) - train_set
+    test_idx = np.array(list(available_indices))
+    
+    train_list = [dataset_list[i] for i in train_idx]
+    val_list = [dataset_list[i] for i in val_idx]
+    test_list = [dataset_list[i] for i in test_idx]
 
     # define early stopper
     early_stopper = EarlyStopper(patience=10, min_delta=100)
@@ -110,10 +133,8 @@ if __name__ == '__main__':
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
-    # SDNE TRAINING: consists of computing gradients for each cov-batch, which contains all samples for a given covariance between graphs
-    # SDNE TRAINING: accumulates gradients on the epoch level
+    # SDNE TRAINING
     for epoch in pbar:
-
         opt1.zero_grad()
         opt2.zero_grad()
 
@@ -121,208 +142,191 @@ if __name__ == '__main__':
         batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
         batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
         batch_predictions = []
-        for cov in sim.covs:
+        for data in train_list:
+            data = data.to(device)
 
-            filtered_data_list = [data for data in dataset_list if (np.round(data.y.item(), 1) == cov)]
-            filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
+            # get inputs
+            x1 = data.x[0, :, :].to(device)
+            x2 = data.x[1, :, :].to(device)
 
-            lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
-            lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
-            for data in filtered_loader:
-                # Move data to the appropriate device
+            # create global loss parameter matrix
+            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+            b1_mat[x1 != 0], b2_mat[x2 != 0] = params['beta'], params['beta']
+
+            # forward pass
+            x1_hat, z1, z1_norm = model1.forward(x1)
+            x2_hat, z2, z2_norm = model2.forward(x2)
+
+            # compute correlation between embeddings (true target)
+            pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
+
+            # store pred and true values
+            batch_predictions.append([pred_cov, data.y])
+
+            # compute loss functions I
+            ll1 = loss_local.forward(adj=x1, z=z1)
+            lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
+            lr1 = loss_reg.forward(model=model1)
+            le1 = loss_eigen.forward(adj=x1, x=x1_hat)
+
+            if args.stadardize_losses:
+                l1_sum = lg1.item() + ll1.item() + lr1.item() + le1.item()
+                lg1 /= l1_sum
+                ll1 /= l1_sum
+                lr1 /= l1_sum
+                le1 /= l1_sum
+            lt1 = (params['alpha'] * lg1) + (params['theta'] * ll1) + (params['nu'] * lr1) + (params['gamma'] * le1)
+
+            batch_tot_loss1.append(lt1.item())
+            batch_global_loss1.append(lg1.item())
+            batch_local_loss1.append(ll1.item())
+            batch_reg_loss1.append(lr1.item())
+            batch_eigen_loss1.append(le1.item())
+
+            # compute loss functions II
+            ll2 = loss_local.forward(adj=x2, z=z2)
+            lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
+            lr2 = loss_reg.forward(model=model2)
+            le2 = loss_eigen.forward(adj=x2, x=x2_hat)
+
+            if args.stadardize_losses:
+                l2_sum = lg2.item() + ll2.item() + lr2.item() + le2.item()
+                lg2 /= l2_sum
+                ll2 /= l2_sum
+                lr2 /= l2_sum
+                le2 /= l2_sum
+            lt2 = (params['alpha'] * lg2) + (params['theta'] * ll2) + (params['nu'] * lr2) + (params['gamma'] * le2)
+
+            batch_tot_loss2.append(lt2.item())
+            batch_global_loss2.append(lg2.item())
+            batch_local_loss2.append(ll2.item())
+            batch_reg_loss2.append(lr2.item())
+            batch_eigen_loss2.append(le2.item())
+
+            # backward pass
+            lt1.backward()
+            lt2.backward()
+
+        opt1.step()
+        opt2.step()
+
+        # gradient clipping
+        if args.gradient_clipping:
+            torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
+
+        # Validation
+        val_tot_loss1, val_tot_loss2 = [], []
+        with torch.no_grad():
+            for data in val_list:
                 data = data.to(device)
-
-                # get inputs
                 x1 = data.x[0, :, :].to(device)
                 x2 = data.x[1, :, :].to(device)
-
-                # create global loss parameter matrix
                 b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-                b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+                b1_mat[x1 != 0], b2_mat[x2 != 0] = params['beta'], params['beta']
 
-                # forward pass
                 x1_hat, z1, z1_norm = model1.forward(x1)
                 x2_hat, z2, z2_norm = model2.forward(x2)
 
-                # compute correlation between embeddings (true target)
-                pred_cov = model1.compute_spearman_rank_correlation(x=z1.flatten().detach(), y=z2.flatten().detach())
-
-                # store pred and true values
-                batch_predictions.append([pred_cov, data.y])
-
-                # compute loss functions I
                 ll1 = loss_local.forward(adj=x1, z=z1)
                 lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
                 lr1 = loss_reg.forward(model=model1)
                 le1 = loss_eigen.forward(adj=x1, x=x1_hat)
 
-                ## compute total loss
-                ## lg ~ ladd >>> lr > ll
-                if args.stadardize_losses:
-                    l1_sum = lg1.item() + ll1.item() + lr1.item() + le1.item()
-                    lg1 /= l1_sum
-                    ll1 /= l1_sum
-                    lr1 /= l1_sum
-                    le1 /= l1_sum
-                lt1 = (args.alpha * lg1) + (args.theta * ll1) + (args.nu * lr1) + (args.gamma * le1)
+                lt1 = (params['alpha'] * lg1) + (params['theta'] * ll1) + (params['nu'] * lr1) + (params['gamma'] * le1)
+                val_tot_loss1.append(lt1.item())
 
-                lt1_tot += lt1
-                lg1_tot += lg1
-                ll1_tot += ll1
-                lr1_tot += lr1
-                le1_tot += le1
-
-                # compute loss functions II
                 ll2 = loss_local.forward(adj=x2, z=z2)
                 lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
                 lr2 = loss_reg.forward(model=model2)
                 le2 = loss_eigen.forward(adj=x2, x=x2_hat)
 
-                ## compute total loss
-                ## g ~ ladd >>> lr > ll
-                if args.stadardize_losses:
-                    l2_sum = lg2.item() + ll2.item() + lr2.item() + le2.item()
-                    lg2 /= l2_sum
-                    ll2 /= l2_sum
-                    lr2 /= l2_sum
-                    le2 /= l2_sum
-                lt2 = (args.alpha * lg2) + (args.theta * ll2) + (args.nu * lr2) + (args.gamma * le2)
+                lt2 = (params['alpha'] * lg2) + (params['theta'] * ll2) + (params['nu'] * lr2) + (params['gamma'] * le2)
+                val_tot_loss2.append(lt2.item())
 
-                lt2_tot += lt2
-                lg2_tot += lg2
-                ll2_tot += ll2
-                lr2_tot += lr2
-                le2_tot += le2
-
-            ## backward pass
-            lt1_tot.backward()
-            opt1.step()
-
-            ## backward pass
-            lt2_tot.backward()
-            opt2.step()
-
-            ## gradient clipping
-            if args.gradient_clipping:
-                torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
-                torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
-
-            batch_tot_loss1.append(lt1_tot.detach().item())
-            batch_global_loss1.append(lg1_tot.detach().item())
-            batch_local_loss1.append(ll1_tot.detach().item())
-            batch_reg_loss1.append(lr1_tot.detach().item())
-            batch_eigen_loss1.append(le1_tot.detach().item())
-
-            batch_tot_loss2.append(lt2_tot.detach().item())
-            batch_global_loss2.append(lg2_tot.detach().item())
-            batch_local_loss2.append(ll2_tot.detach().item())
-            batch_reg_loss2.append(lr2_tot.detach().item())
-            batch_eigen_loss2.append(le2_tot.detach().item())
-
-        ## early stopping
+        # early stopping
         if args.early_stopping:
-            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+            if early_stopper.early_stop(np.mean(val_tot_loss1)) and early_stopper.early_stop(np.mean(val_tot_loss2)):             
                 break
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
+        epochs_tot_loss.append(torch.tensor([np.mean(batch_tot_loss1), np.mean(batch_tot_loss2)]).to(device))
+        epochs_global_loss.append(torch.tensor([np.mean(batch_global_loss1), np.mean(batch_global_loss2)]).to(device))
+        epochs_local_loss.append(torch.tensor([np.mean(batch_local_loss1), np.mean(batch_local_loss2)]).to(device))
+        epochs_reg_loss.append(torch.tensor([np.mean(batch_reg_loss1), np.mean(batch_reg_loss2)]).to(device))
+        epochs_eigen_loss.append(torch.tensor([np.mean(batch_eigen_loss1), np.mean(batch_eigen_loss2)]).to(device))
 
-        epochs_tot_loss.append(torch.stack([torch.tensor(batch_tot_loss1), torch.tensor(batch_tot_loss2)], axis=1).to(device))
-        epochs_global_loss.append(torch.stack([torch.tensor(batch_global_loss1), torch.tensor(batch_global_loss2)], axis=1).to(device))
-        epochs_local_loss.append(torch.stack([torch.tensor(batch_local_loss1), torch.tensor(batch_local_loss2)], axis=1).to(device))
-        epochs_reg_loss.append(torch.stack([torch.tensor(batch_reg_loss1), torch.tensor(batch_reg_loss2)], axis=1).to(device))
-        epochs_eigen_loss.append(torch.stack([torch.tensor(batch_eigen_loss1), torch.tensor(batch_eigen_loss2)], axis=1).to(device))
-
-    # pred list to tensor
-    epochs_predictions = torch.stack(epochs_predictions)
-    epochs_tot_loss = torch.stack(epochs_tot_loss)
-    epochs_global_loss = torch.stack(epochs_global_loss)
-    epochs_local_loss = torch.stack(epochs_local_loss)
-    epochs_reg_loss = torch.stack(epochs_reg_loss)
-    epochs_eigen_loss = torch.stack(epochs_eigen_loss)
-
-    pbar = tqdm(range(len(sim.n_simulations)), total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
-    test_results = []
+    # Evaluate on test set
+    test_tot_loss1, test_tot_loss2 = [], []
     with torch.no_grad():
-        for n in pbar:
+        for data in test_list:
+            data = data.to(device)
+            x1 = data.x[0, :, :].to(device)
+            x2 = data.x[1, :, :].to(device)
+            b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
+            b1_mat[x1 != 0], b2_mat[x2 != 0] = params['beta'], params['beta']
 
-            simulation_results = []
-            for cov in sim.covs:
+            x1_hat, z1, z1_norm = model1.forward(x1)
+            x2_hat, z2, z2_norm = model2.forward(x2)
 
-                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (np.round(data.y.item(), 1) == cov)]
-                filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
+            ll1 = loss_local.forward(adj=x1, z=z1)
+            lg1 = loss_global.forward(adj=x1, x=x1_hat, b_mat=b1_mat)
+            lr1 = loss_reg.forward(model=model1)
+            le1 = loss_eigen.forward(adj=x1, x=x1_hat)
 
-                embeddings = [] 
-                for data in filtered_loader:
-                    # Move data to the appropriate device
-                    data = data.to(device)
+            lt1 = (params['alpha'] * lg1) + (params['theta'] * ll1) + (params['nu'] * lr1) + (params['gamma'] * le1)
+            test_tot_loss1.append(lt1.item())
 
-                    # get inputs
-                    x1 = data.x[0, :, :].to(device)
-                    x2 = data.x[1, :, :].to(device)
+            ll2 = loss_local.forward(adj=x2, z=z2)
+            lg2 = loss_global.forward(adj=x2, x=x2_hat, b_mat=b2_mat)
+            lr2 = loss_reg.forward(model=model2)
+            le2 = loss_eigen.forward(adj=x2, x=x2_hat)
 
-                    # create global loss parameter matrix
-                    b1_mat, b2_mat = torch.ones_like(x1), torch.ones_like(x2)
-                    b1_mat[x1 != 0], b2_mat[x2 != 0] = args.beta, args.beta
+            lt2 = (params['alpha'] * lg2) + (params['theta'] * ll2) + (params['nu'] * lr2) + (params['gamma'] * le2)
+            test_tot_loss2.append(lt2.item())
 
-                    # forward pass
-                    x1_hat, z1, z1_norm = model1.forward(x1)
-                    x2_hat, z2, z2_norm = model2.forward(x2)
-                    embeddings.append(torch.stack((z1.flatten().detach(), z2.flatten().detach()), dim=1))
+    final_test_loss = np.mean(test_tot_loss1 + test_tot_loss2)
+    final_val_loss = np.mean(val_tot_loss1 + val_tot_loss2)
 
-                embeddings = torch.concat(embeddings)
-
-                pred_cov = model1.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
-
-                simulation_results.append([pred_cov, cov])
-            
-            simulation_results = torch.tensor(simulation_results).to(device)
-            test_results.append(simulation_results)
-                        
-    test_results = torch.stack(test_results)
-
-    outargs = {
-        "args": args
+    return {
+        'loss': final_val_loss,
+        'test_loss': final_test_loss,
+        'status': STATUS_OK,
+        'params': params
     }
 
-    predictions = {
-        "train_predictions": epochs_predictions.cpu(),
-        "test_predictions": test_results.cpu(),
+if __name__ == '__main__':
+    # Run the hyperparameter search
+    trials = Trials()
+    best = fmin(
+        fn=objective,
+        space=space,
+        algo=tpe.suggest,
+        max_evals=100,  # Adjust this number based on your computational resources
+        trials=trials
+    )
+
+    # Extract the best parameters
+    best_params = {
+        'alpha': best['alpha'],
+        'beta': best['beta'],
+        'theta': best['theta'],
+        'nu': best['nu'],
+        'gamma': best['gamma']
     }
 
-    training_info = {
-        "train_loss": epochs_tot_loss.cpu(),
-    }
-
-    epochs_loss = {
-        "epochs_global_loss": epochs_global_loss.cpu(),
-        "epochs_local_loss": epochs_local_loss.cpu(),
-        "epochs_reg_loss": epochs_reg_loss.cpu(),
-        "epochs_eigen_loss": epochs_eigen_loss.cpu()
-    }
-
-    if args.stadardize_losses:
-        weights_name = f'alpha{int(args.alpha)}_theta{int(args.theta)}_nu{int(args.nu)}_gamma{int(args.gamma)}'
-        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
-    else:
-        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
-
-    # check if file exists 
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
+    # Save the trial results
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}_hyperopt"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    # save file
-    if args.sample:
-        save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
-        save_pickle(path=f"{output_path}/sample_predictions.pkl", obj=predictions)
-        save_pickle(path=f"{output_path}/sample_training_info.pkl", obj=training_info)
-        save_pickle(path=f"{output_path}/sample_epochs_loss.pkl", obj=epochs_loss)
-        torch.save(model1.state_dict(), f"{output_path}/model1_sample.pth")
-        torch.save(model2.state_dict(), f"{output_path}/model2_sample.pth")
-    else:
-        save_pickle(path=f"{output_path}/args.pkl", obj=outargs)
-        save_pickle(path=f"{output_path}/predictions.pkl", obj=predictions)
-        save_pickle(path=f"{output_path}/training_info.pkl", obj=training_info)
-        save_pickle(path=f"{output_path}/epochs_loss.pkl", obj=epochs_loss)
-        torch.save(model1.state_dict(), f"{output_path}/model1.pth")
-        torch.save(model2.state_dict(), f"{output_path}/model2.pth")
+    save_pickle(path=f"{output_path}/hyperopt_trials.pkl", obj=trials)
+    save_pickle(path=f"{output_path}/best_params.pkl", obj=best_params)
+
+    results_df = pd.DataFrame(trials.results)
+    results_df.to_csv(f"{output_path}/hyperopt_results.csv", index=False)
+
+    print("Best hyperparameters found:")
+    print(best_params)
+    print(f"Best validation loss: {trials.best_trial['result']['loss']}")
+    print(f"Corresponding test loss: {trials.best_trial['result']['test_loss']}")
