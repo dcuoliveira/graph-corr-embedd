@@ -298,11 +298,15 @@ if __name__ == '__main__':
         "epochs_eigen_loss": epochs_eigen_loss.cpu()
     }
 
+    model_name = f"{args.model_name}_es" if args.early_stopping else args.model_name
+    model_name = f"{model_name}_gc" if args.gradient_clipping else model_name
+    model_name = f"{model_name}_sl" if args.stadardize_losses else model_name
+
     if args.stadardize_losses:
         weights_name = f'alpha{int(args.alpha)}_theta{int(args.theta)}_nu{int(args.nu)}_gamma{int(args.gamma)}'
-        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
+        model_name = f'{model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
     else:
-        model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+        model_name = f'{model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
