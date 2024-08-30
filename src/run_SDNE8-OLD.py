@@ -43,6 +43,7 @@ parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperpa
 parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
 parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
 parser.add_argument('--stadardize_losses', type=bool, default=False, help='Bool to specify if to standardize the value of loss functions.')
+parser.add_argument('--eigen_loss_type', type=str, default="norm", help='Type of loss to compute the eigenvalues.')
 
 if __name__ == '__main__':
 
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
-        dataset_list = sim.create_graph_list(load_preprocessed=True)
+        dataset_list = sim.create_graph_list(load_preprocessed=False)
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
@@ -101,7 +102,7 @@ if __name__ == '__main__':
     loss_local = LossLocal()
     loss_global = LossGlobal()
     loss_reg = LossReg()
-    loss_eigen = LossEigen()
+    loss_eigen = LossEigen(loss_type=args.eigen_loss_type)
 
     # initialize tqdm
     pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running {args.model_name} model")
