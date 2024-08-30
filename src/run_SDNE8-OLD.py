@@ -59,6 +59,7 @@ if __name__ == '__main__':
     args.shuffle = str_2_bool(args.shuffle)
     args.early_stopping = str_2_bool(args.early_stopping)
     args.gradient_clipping = str_2_bool(args.gradient_clipping)
+    args.stadardize_losses = str_2_bool(args.stadardize_losses)
 
     # define dataset
     print('Loading the data from the simulation!')
@@ -302,6 +303,7 @@ if __name__ == '__main__':
     model_name = f"{args.model_name}_es" if args.early_stopping else args.model_name
     model_name = f"{model_name}_gc" if args.gradient_clipping else model_name
     model_name = f"{model_name}_sl" if args.stadardize_losses else model_name
+    model_name = f"{model_name}_{args.eigen_loss_type}"
 
     if args.stadardize_losses:
         weights_name = f'alpha{int(args.alpha)}_theta{int(args.theta)}_nu{int(args.nu)}_gamma{int(args.gamma)}'

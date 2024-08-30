@@ -23,10 +23,16 @@ class LossEigen:
         # Compute the pairwise Euclidean distance between the eigenvalues
         if self.loss_type == "norm":
             distance = np.linalg.norm(eigenvalues_adj - eigenvalues_x)
-        elif self.loss_type == "dot":
-            distance = np.dot(eigenvalues_adj, eigenvalues_x)
-        elif self.loss_type == "mse":
-            distance = np.mean((eigenvalues_adj - eigenvalues_x)**2)
+        else:
+            # Sort the eigenvalues in ascending order
+            eigenvalues_adj = np.sort(eigenvalues_adj)
+            eigenvalues_x = np.sort(eigenvalues_x)
+            if self.loss_type == "norms":
+                distance = np.linalg.norm(eigenvalues_adj - eigenvalues_x)
+            elif self.loss_type == "dot":
+                distance = np.dot(eigenvalues_adj, eigenvalues_x)
+            elif self.loss_type == "mse":
+                distance = np.mean((eigenvalues_adj - eigenvalues_x)**2)
         
         # Convert the distance to a PyTorch tensor
         loss = torch.tensor(distance, dtype=torch.float32)
