@@ -22,10 +22,10 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
-parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
+parser.add_argument('--graph_name', type=str, help='Graph name.', default="watts_strogatz")
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
-parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8oldes")
+parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8old")
 parser.add_argument('--n_nodes', type=int, help='Number of nodes.', default=100)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--epochs', type=int, help='Epochs to train the model.', default=10)
@@ -40,9 +40,9 @@ parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperp
 parser.add_argument('--theta', type=float, default=1, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
 parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
-parser.add_argument('--early_stopping', type=bool, default=True, help='Bool to specify if to use early stoping.')
-parser.add_argument('--gradient_clipping', type=bool, default=True, help='Bool to specify if to use gradient clipping.')
-parser.add_argument('--stadardize_losses', type=bool, default=False, help='Bool to specify if to standardize the value of loss functions.')
+parser.add_argument('--early_stopping', type=str, default=False, help='Bool to specify if to use early stoping.')
+parser.add_argument('--gradient_clipping', type=str, default=False, help='Bool to specify if to use gradient clipping.')
+parser.add_argument('--stadardize_losses', type=str, default=False, help='Bool to specify if to standardize the value of loss functions.')
 parser.add_argument('--eigen_loss_type', type=str, default="norm", help='Type of loss to compute the eigenvalues.')
 
 if __name__ == '__main__':
@@ -313,6 +313,7 @@ if __name__ == '__main__':
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
+    print(f"Saving data to {output_path}")
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
