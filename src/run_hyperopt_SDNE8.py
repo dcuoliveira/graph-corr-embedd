@@ -302,7 +302,7 @@ if __name__ == '__main__':
         fn=objective,
         space=space,
         algo=tpe.suggest,
-        max_evals=100,  # Adjust this number based on your computational resources
+        max_evals=50,
         trials=trials
     )
 
