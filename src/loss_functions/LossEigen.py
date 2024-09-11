@@ -2,8 +2,8 @@ import torch
 import numpy as np
 
 class LossEigen:
-    def __init__(self):
-        pass
+    def __init__(self, loss_type: str="norm"):
+        self.loss_type = loss_type
 
     def forward(self, adj, x):
         # Convert tensors to numpy arrays if they are PyTorch tensors
@@ -15,9 +15,24 @@ class LossEigen:
         # Compute the eigenvalues of the adjacency matrices
         eigenvalues_adj = np.linalg.eigvals(adj)
         eigenvalues_x = np.linalg.eigvals(x)
+
+        # Sort the eigenvalues in ascending order
+        eigenvalues_adj = np.sort(eigenvalues_adj)
+        eigenvalues_x = np.sort(eigenvalues_x)
         
         # Compute the pairwise Euclidean distance between the eigenvalues
-        distance = np.linalg.norm(eigenvalues_adj - eigenvalues_x)
+        if self.loss_type == "norm":
+            distance = np.linalg.norm(eigenvalues_adj - eigenvalues_x)
+        else:
+            # Sort the eigenvalues in ascending order
+            eigenvalues_adj = np.sort(eigenvalues_adj)
+            eigenvalues_x = np.sort(eigenvalues_x)
+            if self.loss_type == "norms":
+                distance = np.linalg.norm(eigenvalues_adj - eigenvalues_x)
+            elif self.loss_type == "dot":
+                distance = np.dot(eigenvalues_adj, eigenvalues_x)
+            elif self.loss_type == "mse":
+                distance = np.mean((eigenvalues_adj - eigenvalues_x)**2)
         
         # Convert the distance to a PyTorch tensor
         loss = torch.tensor(distance, dtype=torch.float32)
