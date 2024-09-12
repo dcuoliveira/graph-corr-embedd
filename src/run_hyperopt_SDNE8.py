@@ -56,9 +56,10 @@ space = {
     'gamma': hp.uniform('gamma', 1e-5, 1),
 }
 
+# parse args
+args = parser.parse_args()
+
 def objective(params):
-    # parse args
-    args = parser.parse_args()
 
     # convert to boolean
     args.sample = str_2_bool(args.sample)
@@ -302,7 +303,7 @@ if __name__ == '__main__':
         fn=objective,
         space=space,
         algo=tpe.suggest,
-        max_evals=50,
+        max_evals=1,
         trials=trials
     )
 
