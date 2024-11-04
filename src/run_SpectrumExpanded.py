@@ -21,7 +21,7 @@ parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
-parser.add_argument('--k', type=int, help='Number of eigenvalues to use.', default=1)
+parser.add_argument('--k', type=int, help='Number of eigenvalues to use.', default=2)
 
 if __name__ == '__main__':
 
@@ -55,7 +55,8 @@ if __name__ == '__main__':
             filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
-            embeddings = [] 
+            embeddings1 = []
+            embeddings2 = [] 
             for data in filtered_loader:
 
                 # get inputs
@@ -66,9 +67,11 @@ if __name__ == '__main__':
                 z1 = model.forward(x1, k=args.k)
                 z2 = model.forward(x2, k=args.k)
 
-                embeddings.append([z1, z2])
-            embeddings = torch.tensor(embeddings)
-            pred_cov = model.compute_spearman_rank_correlation(x=embeddings[:,0], y=embeddings[:,1])
+                embeddings1 += list(z1)
+                embeddings2 += list(z2)
+            embeddings1 = torch.tensor(embeddings1)
+            embeddings2 = torch.tensor(embeddings2)
+            pred_cov = model.compute_spearman_rank_correlation(x=embeddings1, y=embeddings2)
 
             simulation_results.append([pred_cov, cov])
         simulation_results = torch.tensor(simulation_results)
