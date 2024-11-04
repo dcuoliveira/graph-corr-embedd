@@ -1,4 +1,11 @@
 import numpy as np
+import torch
+
+def scaled_arctan(x):
+    return ((2 / torch.pi) * torch.atan(torch.tensor(x)) - 1).item()
+
+def arctan(x):
+   return (np.exp(x) - np.exp(-x))/(np.exp(x) + np.exp(-x))
 
 def sigmoid(x):
  return 1/(1 + np.exp(-x))
