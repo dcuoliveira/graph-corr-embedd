@@ -27,6 +27,7 @@ dependencies:
   - seaborn
   - dgl
   - pip
+  - netrd
   - pip:
     - torch-geometric
     - torch-geometric-temporal
