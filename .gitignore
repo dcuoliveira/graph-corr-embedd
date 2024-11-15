@@ -6,6 +6,8 @@ src/data/inputs/simulation1a/*.pkl
 src/data/inputs/simulation1c/erdos_renyi/*.pkl
 src/data/inputs/simulation1c/watts_strogatz/*.pkl
 src/data/data/*
+src/data/inputs/simulation1c/geometric/*.pkl
+src/data/inputs/simulation1c/k_regular/*.pkl
 
 # vscode
 .DS_Store
