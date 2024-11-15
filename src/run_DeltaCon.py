@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 # General parameters
 parser.add_argument('--model_name', type=str, help='Model name.', default="frobenius")
 parser.add_argument('--graph_name', type=str, help='Graph name.', default="watts_strogatz")
-parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
+parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=False)
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
         print('Loading the simulation data!')
-        dataset_list = sim.create_graph_list(load_preprocessed=False)
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
     print('Finish Loading')
