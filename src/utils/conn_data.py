@@ -11,7 +11,7 @@ def save_pickle(path: str,
         joblib.dump(obj, path)
     else:
         with open(path, 'wb') as handle:
-            pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(obj, handle)
 
 def load_pickle(path: str):
 

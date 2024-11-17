@@ -4,6 +4,8 @@ import argparse
 import os
 from tqdm import tqdm
 from torch_geometric.data import DataLoader
+from model_utils.EarlyStopper import EarlyStopper
+import numpy as np
 
 from models.SDNE import SDNE
 from data.Simulation1aLoader import Simulation1aLoader
@@ -20,7 +22,7 @@ parser = argparse.ArgumentParser()
 
 # General parameters
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
-parser.add_argument('--graph_name', type=str, help='Graph name.', default="erdos_renyi")
+parser.add_argument('--graph_name', type=str, help='Graph name.', default="watts_strogatz")
 parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.', default=True)
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1, choices=[1])
 parser.add_argument('--model_name', type=str, help='Model name.', default="sdne8old")
@@ -35,8 +37,13 @@ parser.add_argument('--dropout', type=float, help='Dropout rate (1 - keep probab
 parser.add_argument('--learning_rate', type=float, help='Learning rate of the optimization algorithm.', default=0.001)
 parser.add_argument('--beta', default=5., type=float, help='beta is a hyperparameter in SDNE.')
 parser.add_argument('--alpha', type=float, default=1e-2, help='alpha is a hyperparameter in SDNE.')
-parser.add_argument('--gamma', type=float, default=1e3, help='gamma is a hyperparameter to multiply the add loss function.')
+parser.add_argument('--theta', type=float, default=1, help='alpha is a hyperparameter in SDNE.')
 parser.add_argument('--nu', type=float, default=1e-5, help='nu is a hyperparameter in SDNE.')
+parser.add_argument('--gamma', type=float, default=1e2, help='gamma is a hyperparameter to multiply the add loss function.')
+parser.add_argument('--early_stopping', type=str, default=False, help='Bool to specify if to use early stoping.')
+parser.add_argument('--gradient_clipping', type=str, default=False, help='Bool to specify if to use gradient clipping.')
+parser.add_argument('--stadardize_losses', type=str, default=False, help='Bool to specify if to standardize the value of loss functions.')
+parser.add_argument('--eigen_loss_type', type=str, default="norm", help='Type of loss to compute the eigenvalues.')
 
 if __name__ == '__main__':
 
@@ -50,15 +57,26 @@ if __name__ == '__main__':
     # convert to boolean
     args.sample = str_2_bool(args.sample)
     args.shuffle = str_2_bool(args.shuffle)
+    args.early_stopping = str_2_bool(args.early_stopping)
+    args.gradient_clipping = str_2_bool(args.gradient_clipping)
+    args.stadardize_losses = str_2_bool(args.stadardize_losses)
 
     # define dataset
+    print('Loading the data from the simulation!')
     if args.dataset_name == "simulation1a":
         sim = Simulation1aLoader(name=args.dataset_name, sample=args.sample)
+        dataset_list = sim.create_graph_list()
+
     elif args.dataset_name == "simulation1c":
         sim = Simulation1cLoader(name=args.dataset_name, sample=args.sample, graph_name = args.graph_name)
+        print('Loading the simulation data!')
+        dataset_list = sim.create_graph_list(load_preprocessed=True)
     else:
         raise Exception('Dataset not found!')
-    dataset_list = sim.create_graph_list()
+    print('Finish Loading')
+
+    # define early stopper
+    early_stopper = EarlyStopper(patience=10, min_delta=100)
 
     # define model
     model1 = SDNE(node_size=args.n_nodes,
@@ -85,10 +103,10 @@ if __name__ == '__main__':
     loss_local = LossLocal()
     loss_global = LossGlobal()
     loss_reg = LossReg()
-    loss_eigen = LossEigen()
+    loss_eigen = LossEigen(loss_type=args.eigen_loss_type)
 
     # initialize tqdm
-    pbar = tqdm(args.epochs, total=args.epochs, desc=f"Running {args.model_name} model")
+    pbar = tqdm(range(args.epochs), total=args.epochs, desc=f"Running {args.model_name} model")
     epochs_tot_loss, epochs_global_loss, epochs_local_loss, epochs_reg_loss, epochs_eigen_loss = [], [], [], [], []
     epochs_predictions = []
 
@@ -100,14 +118,13 @@ if __name__ == '__main__':
         opt2.zero_grad()
 
         epoch_results = []
+        batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
+        batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
+        batch_predictions = []
         for cov in sim.covs:
 
-            filtered_data_list = [data for data in dataset_list if (data.y.item() == cov)]
+            filtered_data_list = [data for data in dataset_list if (np.round(data.y.item(), 1) == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
-        
-            batch_tot_loss1, batch_global_loss1, batch_local_loss1, batch_reg_loss1, batch_eigen_loss1 = [], [], [], [], []
-            batch_tot_loss2, batch_global_loss2, batch_local_loss2, batch_reg_loss2, batch_eigen_loss2 = [], [], [], [], []
-            batch_predictions = []
 
             lt1_tot, lg1_tot, ll1_tot, lr1_tot, le1_tot = 0, 0, 0, 0, 0
             lt2_tot, lg2_tot, ll2_tot, lr2_tot, le2_tot = 0, 0, 0, 0, 0
@@ -141,7 +158,13 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## lg ~ ladd >>> lr > ll
-                lt1 = (args.alpha * lg1) + ll1 + (args.nu * lr1) + (100 * le1)
+                if args.stadardize_losses:
+                    l1_sum = lg1.item() + ll1.item() + lr1.item() + le1.item()
+                    lg1 /= l1_sum
+                    ll1 /= l1_sum
+                    lr1 /= l1_sum
+                    le1 /= l1_sum
+                lt1 = (args.alpha * lg1) + (args.theta * ll1) + (args.nu * lr1) + (args.gamma * le1)
 
                 lt1_tot += lt1
                 lg1_tot += lg1
@@ -157,7 +180,13 @@ if __name__ == '__main__':
 
                 ## compute total loss
                 ## g ~ ladd >>> lr > ll
-                lt2 = (args.alpha * lg2) + ll2 + (args.nu * lr2) + (100 * le2)
+                if args.stadardize_losses:
+                    l2_sum = lg2.item() + ll2.item() + lr2.item() + le2.item()
+                    lg2 /= l2_sum
+                    ll2 /= l2_sum
+                    lr2 /= l2_sum
+                    le2 /= l2_sum
+                lt2 = (args.alpha * lg2) + (args.theta * ll2) + (args.nu * lr2) + (args.gamma * le2)
 
                 lt2_tot += lt2
                 lg2_tot += lg2
@@ -173,6 +202,11 @@ if __name__ == '__main__':
             lt2_tot.backward()
             opt2.step()
 
+            ## gradient clipping
+            if args.gradient_clipping:
+                torch.nn.utils.clip_grad_norm_(model1.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(model2.parameters(), max_norm=1.0)
+
             batch_tot_loss1.append(lt1_tot.detach().item())
             batch_global_loss1.append(lg1_tot.detach().item())
             batch_local_loss1.append(ll1_tot.detach().item())
@@ -184,6 +218,11 @@ if __name__ == '__main__':
             batch_local_loss2.append(ll2_tot.detach().item())
             batch_reg_loss2.append(lr2_tot.detach().item())
             batch_eigen_loss2.append(le2_tot.detach().item())
+
+        ## early stopping
+        if args.early_stopping:
+            if early_stopper.early_stop(lt1_tot) and early_stopper.early_stop(lt2_tot):             
+                break
 
         epochs_predictions.append(torch.tensor(batch_predictions).to(device))
 
@@ -201,7 +240,7 @@ if __name__ == '__main__':
     epochs_reg_loss = torch.stack(epochs_reg_loss)
     epochs_eigen_loss = torch.stack(epochs_eigen_loss)
 
-    pbar = tqdm(sim.n_simulations, total=sim.n_simulations, desc=f"Running {args.model_name} model on test data")
+    pbar = tqdm(range(len(sim.n_simulations)), total=len(sim.n_simulations), desc=f"Running {args.model_name} model on test data")
     test_results = []
     with torch.no_grad():
         for n in pbar:
@@ -209,7 +248,7 @@ if __name__ == '__main__':
             simulation_results = []
             for cov in sim.covs:
 
-                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+                filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (np.round(data.y.item(), 1) == cov)]
                 filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
                 embeddings = [] 
@@ -261,10 +300,20 @@ if __name__ == '__main__':
         "epochs_eigen_loss": epochs_eigen_loss.cpu()
     }
 
-    model_name = f'{args.model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
+    model_name = f"{args.model_name}_es" if args.early_stopping else args.model_name
+    model_name = f"{model_name}_gc" if args.gradient_clipping else model_name
+    model_name = f"{model_name}_sl" if args.stadardize_losses else model_name
+    model_name = f"{model_name}_{args.eigen_loss_type}"
+
+    if args.stadardize_losses:
+        weights_name = f'alpha{int(args.alpha)}_theta{int(args.theta)}_nu{int(args.nu)}_gamma{int(args.gamma)}'
+        model_name = f'{model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}_{weights_name}'
+    else:
+        model_name = f'{model_name}_{int(args.n_hidden)}_{int(args.n_layers_enc)}_{int(args.n_layers_dec)}_{int(args.epochs)}'
 
     # check if file exists 
     output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
+    print(f"Saving data to {output_path}")
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
