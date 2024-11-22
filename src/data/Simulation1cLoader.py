@@ -2,8 +2,6 @@ import os
 import sys
 import pickle
 
-# sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
 import torch
 from torch_geometric.utils.convert import from_networkx
 from torch_geometric.data import Data, DataLoader
@@ -17,6 +15,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
+
+DEBUG = False
+
+if DEBUG:
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from utils.conn_data import load_pickle, load_pickle_fast
 
@@ -161,16 +164,20 @@ class Simulation1cLoader(object):
 
         return loader
 
-DEBUG = False
-
 if __name__ == "__main__":
     if DEBUG:
+
+        graph_name='erdos_renyi'
+        sample=False
+        dataset_name='simulation1c'
+        load_preprocessed=False
+
         import time
 
         start = time.time()
 
-        loader = Simulation1cLoader(sample=True)
-        graph_loader = loader.create_graph_loader()
+        sim = Simulation1cLoader(name=dataset_name, sample=sample, graph_name = graph_name)
+        graph_list = sim.create_graph_list(load_preprocessed=load_preprocessed)
 
         # time to minutes
         print("Time to load and process data: ", (time.time() - start) / 60)
