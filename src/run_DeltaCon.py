@@ -23,7 +23,7 @@ parser.add_argument('--sample', type=str, help='Boolean if sample graph to save.
 parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="simulation1c")
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
-parser.add_argument('--load_preprocessed', type=str, help='Load preprocessed graph data.', default=False)
+parser.add_argument('--load_preprocessed', type=str, help='Load preprocessed graph data.', default=True)
 
 if __name__ == '__main__':
 
@@ -45,14 +45,14 @@ if __name__ == '__main__':
 
     # define model
     model = DeltaConWrapper()
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc="Running Spectrum model")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
     train_test_results = []
     for n in pbar:
 
         simulation_results = []
         for cov in sim.covs:
 
-            filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y.item() == cov)]
+            filtered_data_list = [data for data in dataset_list if (data.n_simulations == n) and (data.y == cov)]
             filtered_loader = DataLoader(filtered_data_list, batch_size=args.batch_size, shuffle=args.shuffle)
 
             sim_standardized_distances = []
