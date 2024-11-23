@@ -89,12 +89,12 @@ if __name__ == "__main__":
                     "graph2": graph2,
                     "seed": save_seed,
                     "p": ps[j,],
-                    "cov": np.round(s, 1) # cov = corr becaus variances are 1
+                    "cov": round(s, 1) # cov = corr becaus variances are 1
                 }
 
                 graphs_given_cov.append(sim_graph_info)
 
-        all_graphs[f"{np.round(s, 1)}"] = graphs_given_cov
+        all_graphs[f"{round(s, 1)}"] = graphs_given_cov
 
     if not args.sample:
         save_pickle(path=f"{output_path}/all_graph_info.pkl", obj=all_graphs)
