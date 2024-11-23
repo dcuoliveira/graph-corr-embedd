@@ -22,6 +22,7 @@ parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="s
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--load_preprocessed', type=str, help='Load preprocessed graph data.', default=True)
+parser.add_argument('--k', type=int, help='Number of eigenvalues to consider for the dependence measure.', default=1)
 
 if __name__ == '__main__':
 
