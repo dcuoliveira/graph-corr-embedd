@@ -106,7 +106,7 @@ class Simulation1cLoader(object):
                     # Create a single Data object
                     data = Data(x=x,
                                 edge_index=edge_index,
-                                y=torch.round(torch.tensor([cov_val], dtype=torch.float), decimals=1),
+                                y=round(cov_val, 1),
                                 n_simulations=graph_pair_info["n_simulations"],
                                 n_graphs=graph_pair_info["n_graphs"])
 
