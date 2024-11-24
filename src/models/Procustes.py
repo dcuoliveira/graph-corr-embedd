@@ -20,18 +20,34 @@ class Procustes(Stats):
         numpy.ndarray: The Laplacian matrix.
         """
 
-        # Ensure adj_matrix is on the correct device
+        # Convert to float32 and ensure it's on the correct device
         adj_matrix = adj_matrix.to(torch.float32)
-
-        # Degree matrix as diagonal
-        degree_matrix = torch.diag(torch.sum(adj_matrix, dim=1))
-
-        # D^(-1/2)
-        d_inv_sqrt = torch.diag(1.0 / torch.sqrt(torch.sum(adj_matrix, dim=1)))
-
-        # Symmetric normalized Laplacian L = I - D^(-1/2) * A * D^(-1/2)
+        
+        # Compute degree
+        degrees = torch.sum(adj_matrix, dim=1)
+        
+        # Add small epsilon to prevent division by zero
+        epsilon = 1e-10
+        degrees = degrees + epsilon
+        
+        # Compute D^(-1/2)
+        d_inv_sqrt = torch.diag(1.0 / torch.sqrt(degrees))
+        
+        # Compute normalized Laplacian
         identity = torch.eye(adj_matrix.size(0), device=adj_matrix.device)
         laplacian = identity - d_inv_sqrt @ adj_matrix @ d_inv_sqrt
+        
+        # Explicitly enforce symmetry by averaging with transpose
+        laplacian = 0.5 * (laplacian + laplacian.t())
+        
+        # Ensure numerical stability
+        laplacian = laplacian.to(torch.float32)
+        
+        # Verify symmetry
+        is_symmetric = torch.allclose(laplacian, laplacian.t(), rtol=1e-5, atol=1e-8)
+        if not is_symmetric:
+            print("Warning: Laplacian is not perfectly symmetric after corrections")
+    
         return laplacian
 
     def top_k_eigenvectors(self, matrix, k):
