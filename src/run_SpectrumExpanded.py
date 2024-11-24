@@ -30,6 +30,7 @@ if __name__ == '__main__':
 
     args.sample = str_2_bool(args.sample)
     args.load_preprocessed = str_2_bool(args.load_preprocessed)
+    model_name = f'{args.model_name}_k={args.k}'
 
     # define dataset
     if args.dataset_name == "simulation1a":
@@ -44,7 +45,7 @@ if __name__ == '__main__':
 
     # define model
     model = Spectrum()
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {model_name} model")
     train_test_results = []
     for n in pbar:
 
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     }
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}_k={args.k}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     

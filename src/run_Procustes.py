@@ -23,6 +23,7 @@ parser.add_argument('--dataset_name', type=str, help='Dataset name.', default="s
 parser.add_argument('--batch_size', type=int, help='Batch size to traint the model.', default=1)
 parser.add_argument('--shuffle', type=str, help='Shuffle the dataset.', default=True)
 parser.add_argument('--load_preprocessed', type=str, help='Load preprocessed graph data.', default=True)
+parser.add_argument('--k', type=int, help='Number of eigenvalues to consider for the dependence measure.', default=1)
 
 if __name__ == '__main__':
 
@@ -30,6 +31,7 @@ if __name__ == '__main__':
 
     args.sample = str_2_bool(args.sample)
     args.load_preprocessed = str_2_bool(args.load_preprocessed)
+    model_name = f'{args.model_name}_k={args.k}'
 
     # define dataset
     if args.dataset_name == "simulation1a":
@@ -44,7 +46,7 @@ if __name__ == '__main__':
 
     # define model
     model = Procustes()
-    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {args.model_name} model")
+    pbar = tqdm(sim.n_simulations, total=len(sim.n_simulations), desc=f"Running {model_name} model")
     train_test_results = []
     for n in pbar:
 
@@ -62,7 +64,7 @@ if __name__ == '__main__':
                 x2 = data.x[1, :, :]
 
                 # forward pass
-                distance = model.forward(x1, x2, k=5)
+                distance = model.forward(x1, x2, k=args.k)
 
                 # standardized distance
                 standardized_distance = scaled_arctan(distance)
@@ -84,7 +86,7 @@ if __name__ == '__main__':
     }
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
