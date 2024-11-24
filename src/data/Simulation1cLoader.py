@@ -113,13 +113,13 @@ class Simulation1cLoader(object):
                     graph_data_list.append(data)
 
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
-            self.covs = np.sort(np.unique([np.round(data.y.item(), 1) for data in graph_data_list]))
+            self.covs = np.sort(np.unique([round(data.y, 1) for data in graph_data_list]))
             self.save_processed_graph_data(graph_data_list)
             return graph_data_list
         else:
             graph_data_list = self.load_processed_graph_data()
             self.n_simulations = np.unique([data.n_simulations for data in graph_data_list])
-            self.covs = np.sort(np.unique([np.round(data.y.item(), 1) for data in graph_data_list]))
+            self.covs = np.sort(np.unique([round(data.y, 1) for data in graph_data_list]))
             return graph_data_list
 
     def create_graph_loader(self, batch_size: int=1):
