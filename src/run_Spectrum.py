@@ -92,7 +92,7 @@ if __name__ == '__main__':
     # save file
     if args.sample:
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
-        save_pickle(path=f"{output_path}/sample_args.pkl", obj=results)
+        save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
     else:
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
-        save_pickle(path=f"{output_path}/args.pkl", obj=args)
+        save_pickle(path=f"{output_path}/args.pkl", obj=outargs)

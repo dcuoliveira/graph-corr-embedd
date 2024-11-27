@@ -90,14 +90,14 @@ if __name__ == '__main__':
     }
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
     # save file
     if args.sample:
-        save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
-        save_pickle(path=f"{output_path}/sample_args.pkl", obj=results)
+        # save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/sample_args.pkl", obj=outargs)
     else:
-        save_pickle(path=f"{output_path}/results.pkl", obj=results)
-        save_pickle(path=f"{output_path}/args.pkl", obj=args)
+        # save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/args.pkl", obj=outargs)
