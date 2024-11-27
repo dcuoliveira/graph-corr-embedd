@@ -79,6 +79,10 @@ if __name__ == '__main__':
         train_test_results.append(simulation_results)
     train_test_results = torch.stack(train_test_results)
 
+    outargs = {
+        "args": args
+    }
+
     results = {
         "train_test_results": train_test_results,
         "n_simulations": sim.n_simulations,
@@ -86,13 +90,14 @@ if __name__ == '__main__':
     }
 
     # check if file exists
-    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{model_name}"
+    output_path = f"{os.path.dirname(__file__)}/data/outputs/{args.dataset_name}/{args.graph_name}/{args.model_name}"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     
     # save file
     if args.sample:
         save_pickle(path=f"{output_path}/sample_results.pkl", obj=results)
-
+        save_pickle(path=f"{output_path}/sample_args.pkl", obj=results)
     else:
         save_pickle(path=f"{output_path}/results.pkl", obj=results)
+        save_pickle(path=f"{output_path}/args.pkl", obj=args)
