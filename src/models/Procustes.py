@@ -3,7 +3,7 @@ import torch.nn as nn
 from scipy.spatial import procrustes
 import torch
 
-from stats.Stats import Stats
+from src.stats.Stats import Stats
 
 class Procustes(Stats):
     def __init__(self):

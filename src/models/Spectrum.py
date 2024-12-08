@@ -2,7 +2,7 @@ import numpy as np
 import torch.nn as nn
 from scipy.stats import spearmanr
 
-from stats.Stats import Stats
+from src.stats.Stats import Stats
 
 class Spectrum(Stats):
     def __init__(self):
